@@ -1,0 +1,223 @@
+\documentclass[12pt]{article}
+  
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb,bm,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+\newcommand{\expect}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\av}{\mathbf{a}}
+\newcommand{\rv}{\mathbf{r}}
+\newcommand{\n}{\mathbf{n}}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\z}{\mathbf{z}}
+\newcommand{\0}{\mathbf{0}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\I}{\mathbf{I}}
+
+\newcommand{\hdash}{\rule[.5ex]{1.5em}{0.4pt}}
+
+
+\newcommand{\solspace}{\vspace{3mm} \textbf{Your Solution Here!} \vspace{3mm}}
+
+\begin{document}
+
+\lhead{ECE 551}
+\chead{PSET 2 - Linear Systems and Estimation}
+\rhead{\today}
+ 
+\section{Yet another linear system}
+Fall 2018\\
+Consider the system $D: \mathbb{C}^{\mathbb{Z}} \rightarrow \mathbb{C}^{\mathbb{Z}}$ defined by $(D x)[n] := x[n] - x[n-1]$.
+\begin{enumerate}
+    \item Compute the adjoint $D^*$ (with respect to the standard inner product)
+    \item Let $L = D D^*$. Compute $(Lx)[n]$ explicitly
+    \item Determine if $L$ is: (a) linear, (b) shift invariant, (c) causal, (d) memoryless, (e) BIBO
+    \item For each $x_k$ given below, find $y_k = L x_k$. Sketch $x_k$ and $y_k$, and explain the effect of $L$.
+    \begin{align*}
+        x_1[n] &= c \quad \text{ for all } n \in \mathbb{Z} \qquad &\text{(A constant sequence)} \\
+        x_2[n] &= \delta[n]  \qquad &\text{(the unit impulse sequence)} \\
+        x_3[n] &= u[n] = \begin{cases}
+            1 \quad n\geq 0 \\
+            0 \quad \text{o.w.}
+        \end{cases}  \qquad &\text{(the unit impulse sequence)}
+    \end{align*}
+\end{enumerate}
+
+\solspace
+
+\pagebreak
+
+\section{A Taste of Tensor Analysis in MIMO processing}
+Fall 2018\\
+Suppose that $N$ audio sources produce waveforms of length $M$, say $\{x_n\}_{n=1}^{N} \in \mathbb{C}^M$.
+An array of $P$ microphones pick up a mixture (linear combination) of those pulses, each microphone getting
+$$
+y_p = \sum_{n=1}^N b_{n,p}x_n, \quad p = 1, ..., P
+$$
+here $(b_{n,p})$ account for multipath effects (reflections resulting in multiple temporally spaced arrivals of a signal) and channel loss (attenuation throughout propagation).
+Then, each sample $y_p$ is processed by some post-filter $A \in \mathbb{C}^{L \times M}$ to a vector $z_p$ of length $L$:
+$$
+    z_p = Ay_p \in \mathbb{C}^L
+$$
+By stacking the inputs and outputs as columns of matrices $X \in \mathbb{C}^{M \times N}$ and $Z \in \mathbb{C}^{L \times P}$, we can write the overall system as a matrix product (here $B = (b_{n,p}) \in \mathbb{C}^{N \times P}$),
+\begin{equation}
+    Z = T(X) := AXB
+\end{equation}
+\begin{enumerate}
+    \item Show that $T : \mathbb{C}^{M \times N} \rightarrow \mathbb{C}^{L \times P}$ is indeed linear (in $X$)
+    \item Show that the matrices $\{E_{m,n}\}$ defined below constitute a basis for $\mathbb{C}^{M \times N}$:
+        \begin{equation}
+            E_{m,n} := e_m f_n^\top, \quad m = 1,...,M, \quad n = 1,...,N
+        \end{equation}
+        here $\{e_m\}_{m=1}^M$ and $\{f_n\}_{n=1}^N$ are the canonical bases for $\mathbb{C}^M$ and $\mathbb{C}^N$ respectively.
+    \item Prove that $\text{vec}(T(X)) = (B^\top \otimes A)\text{vec}(X)$, here $\otimes$ denotes the \href{https://en.wikipedia.org/wiki/Kronecker_product}{Kronecker Product} and \href{https://en.wikipedia.org/wiki/Vectorization_(mathematics)}{vec} denotes the vectorization operation.
+\end{enumerate}
+
+\solspace
+
+\pagebreak
+
+\section{Linear Estimation and Regularization}
+You wish to estimate some linear map $f(\x) = \sum_{k=1}^N \alpha_k x_k = \bm \alpha^\top \x$ from which you have taken a set of $N$ measurements.
+Inherent to our measurement process is some form of adaptive signal amplification, and so the noise becomes somehow proportional to the observation.
+For this reason, you model a given measurement as
+\begin{equation}
+    y_i = (1 + n_i)\x_i^\top \bm \alpha
+\end{equation}
+where each $n_i \sim \mathcal{N}(0,\sigma^2)$ is distributed in an i.i.d. fashion.
+
+Let $\x_i \in \mathbb{R}^{1 \times N}$ be a set of measurement parameters, and let 
+$$
+X = \begin{bmatrix}
+    \hdash \; \x_1 \; \hdash \\
+    \hdash \; \x_2 \; \hdash\\
+    \vdots \\
+    \hdash \; \x_N \; \hdash
+\end{bmatrix}
+$$
+be a matrix representation of all the parameter sets tested.
+If we let $\y \in \mathbb{R}^N$ be the set of measurements, we can denote our forward model of the system to be
+$$
+\y = (I + N)X\bm{\alpha},
+$$
+where $N$ is a diagonal matrix of our measurement noise.
+We have a goal of estimating $\bm\alpha$ given knowledge of $\y$, $X$, and $\sigma^2$.\\
+Assume $X$ is invertible, and define $\sigma_1 = \|X\|_2$, $\sigma_N = 1/\|X^{-1}\|_2$, and $\kappa = \sigma_1/\sigma_N$.
+\begin{enumerate}
+    \item Consider constructing an estimate $\hat{\bm{\alpha}}_1 = X^{-1}\y$. \\
+    You may be concerned about what amount of relative error is likely in such a case.
+    One rough way of quantifying it is to look at the interval that contains most of the probability mass.
+    Give an upper bound for the relative error ($\|\alpha - \hat \alpha\|/\|\alpha\|$) that occurs with some fairly high probability.
+    \textbf{Hint:} If an operator norm corresponds to some maximal amplification, how do you bound $\|A B\|$?
+    \item Now, consider the case where $\sigma_N$ is very small.
+        In this case, we risk having very poor performance for the estimate.
+        Consider instead using a \textit{regularized} $\tilde X = X + \lambda I$, for some relatively small $\lambda$.
+        Give upper bounds for $\| \tilde X \|$ and $\| \tilde X^{-1}\|$. \\
+        \textbf{Hint}: Recall that the operator norm corresponds to the maximum amplification, so how much can $(X + \lambda I)$ amplify a vector?
+    \item Give a similar bound on the relative error of $\hat{\bm{\alpha}}_2 = \tilde X^{-1}\y$
+    \item How would you choose $\lambda$ to reduce this ``worst likely case" error?
+\end{enumerate}
+
+\solspace
+
+\pagebreak
+\section*{Computational Problem — Gram-Schmidt}
+In this problem, you will implement the Gram-Schmidt algorithm to generate an orthonormal basis.
+We will observe that, despite the theoretical promise, the basis generated is not actually very orthogonal.
+You will then implement a variant called Modified Gram-Schmidt (MGS) and observe the improved performance.
+Finally, the Gram-Schmidt process will be used to generate a visually interesting basis for images.
+Some of the following discussion comes from Trefethen and Bau \cite{1997_Trefethen}, which is a book on numerical linear algebra.
+This will conclude our discussion on the topic for the semester.
+
+The assignment is formatted in much the same way as the previous one. There is a python file \verb|HW2.py| with function definitions, a file with some basic tests \verb|HW2_test.py| to help with debugging, and a Jupyter notebook to explore the algorithms a little.
+In the previous assignment, you just implemented the functions first.
+In this case, it can be a little more interactive, and the Jupyter notebook has a section affiliated with each phase of the assignment.
+
+\subsection*{Gram-Schmidt}
+For your convenience, we've copied the pseudo-code from lecture 4 here.
+\begin{algorithm}[h]
+    \caption{Gram-Schmidt Orthogonalization}
+    \label{alg:GS}
+    \begin{algorithmic}[1] % The number tells where the line numbering should start
+        \Procedure{Gram-Schmidt}{$\av_1,...\av_N$} \Comment{Orthogonal Basis for $\text{span}(\av_1,...,\av_N)$}
+            \State $\rv_1 \gets \av_1 / \|\av_1\|$
+			\For{$1<i\leq N$} 
+                %\State $P^{\perp}_i(\x) \gets \x - \sum_{j=1}^{i-1}\langle \x, \rv_j \rangle$ \Comment{Orthogonal Projection Operator}
+                \State $\rv_i \gets P^{\perp}_i \av_i$ \Comment{Project onto Orthogonal Subspace}
+                \State $\rv_i \gets \rv_i / \|\rv_i\|$ \Comment{Normalize}
+            \EndFor
+            \State \textbf{return} $(\rv_1,...,\rv_N)$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+In this case, each vector is a row of a Numpy matrix.
+Remember that the projection is orthogonal to all previously orthonormalized vectors.
+
+Once you have implemented the algorithm, you may want to explore the first section of the Jupyter notebook, though nothing is required to be submitted at this point.
+The first phase just motivates the usage of a modified algorithm.
+
+\subsection*{Modified Gram-Schmidt}
+Hopefully you managed to observe the loss of orthogonality, which leads to the question of how do we actually fix this problem?
+There are better ways to generate an orthogonal basis than the technique presented here, but this technique is important for its connections to other, similar techniques for different problems.
+It is also a much more straightforward method to understand than the alternatives.
+
+The modification is simply to change the order of the projections.
+Rather than construct a new vector that is orthogonal to all previous vectors, orthogonalize all future vectors to the current one.
+Please give an explanation for why this process is equivalent to the original Gram-Schmidt when ignoring floating-point arithmetic.
+It does not need to be mathematically precise.
+
+\solspace
+
+We've included pseudo-code below, where $P^{\perp}_i$ now represents an orthogonal projection onto the subspace orthogonal to $q_i$
+
+\begin{algorithm}[h]
+    \caption{MGS Orthogonalization}
+    \begin{algorithmic}[1] % The number tells where the line numbering should start
+        \Procedure{Modified Gram-Schmidt}{$\q_1,...\q_N$} \Comment{Orthogonal Basis for $\text{span}(\q_1,...,\q_N)$}
+            \For{$1\leq i\leq N$} 
+                \State $\q_i \gets \q_i/\|\q_i\|$ \Comment{Normalize}
+                \For{$i+1 \leq j\leq N$}
+                    \State $\q_j \gets P^{\perp}_i \q_j$ \Comment{Project onto Orthogonal Subspace}
+                \EndFor
+            \EndFor
+            \State \textbf{return} $(\q_1,...,\q_N)$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+Why does the modification improve stability?
+
+Think for a minute about the difference in the projections, and pretend that the numerical errors from each projection introduce a small, but nonzero error oriented randomly in $\mathbb{R}^N$.
+A loose explanation is on the next page once you've thought about it for a couple of minutes.
+\pagebreak
+
+In the classical algorithm, the orthogonal projection can be thought of as projecting the original vector onto each of the previous basis vectors, then subtracting each of those projections together.
+Each of these projections onto a 1D orthogonal subspace potentially introduces a small error.
+
+In contrast, the modified algorithm does the projection one at a time, as each new orthogonal basis vector is available.
+Thus, the portion of the previous floating-point error oriented in the direction of the new basis vector gets removed, resulting in a significantly slower growth of error.
+
+As an aside, if you're familiar with QR factorization of a matrix, you can interpret Gram-Schmidt in that way.
+The more numerically stable algorithms come more from that perspective, such as Householder Reflections.
+
+In the Jupyter notebook, we generate random matrices with different condition numbers and plot a measure of orthogonality as a function of condition number.
+Please include the plot in the write-up. 
+
+\subsection*{Images}
+This section will be entirely within the Jupyter notebook.
+It is primarily a (hopefully) interesting demo of orthonormal bases.
+
+\bibliographystyle{IEEEbib}
+\bibliography{refs.bib}
+
+\end{document}
