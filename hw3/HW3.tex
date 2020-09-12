@@ -1,0 +1,150 @@
+\documentclass[12pt]{article}
+  
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb,bm,mathtools,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+\newcommand{\expect}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\av}{\mathbf{a}}
+\newcommand{\rv}{\mathbf{r}}
+\newcommand{\cv}{\mathbf{cv}}
+\newcommand{\C}{\mathbf{C}}
+\newcommand{\n}{\mathbf{n}}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\z}{\mathbf{z}}
+\newcommand{\0}{\mathbf{0}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\I}{\mathbf{I}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\Y}{\mathbf{Y}}
+
+\newcommand{\hdash}{\rule[.5ex]{1.5em}{0.4pt}}
+
+\newcommand{\DTFT}{\xleftrightarrow{\text{DTFT}}}
+\newcommand{\DFT}{\xleftrightarrow{\text{DFT}}}
+\newcommand{\ZT}{\xleftrightarrow{\text{ZT}}}
+
+
+\newcommand{\solspace}{\vspace{3mm} \textbf{Your Solution Here!} \vspace{3mm}}
+
+\begin{document}
+
+\lhead{ECE 551}
+\chead{PSET 3 - Linear Systems and Estimation}
+\rhead{\today}
+ 
+\section{Some DFT properties}
+Fall 2018\\
+Let $\x,\y \in \mathbb{C}^N$ be signals with corresponding DFTs $\X, \Y \in \mathbb{C}^N$, and let $C_x \in \mathbb{C}^{N \times N}$ be a circulant matrix, whose first column is $\x$. 
+Prove the following
+\begin{enumerate}
+    \item Time reversal: $x[-n \mod N] \DFT X[-k \mod N]$
+    \item Circular convolution theroem (in time and frequency):
+        \begin{align*}
+            (\x \circledast \y)[n] &\DFT X[k]Y[k] \\
+            x[n]y[n] &\DFT \frac{1}{N}(\X \circledast \Y)[k]
+        \end{align*}
+    \item If $\x$ is a real symmetric signal, namely $x[n] = x[-n \mod N]$, then $\X$ is real.
+    \item If $\x$ is a real antisymmetric signal, $x[n] = -x[-n \mod N]$, then $X$ is imaginary.
+    \item The eigenvectors of $C_x$ are $w_k[m] = \exp(\frac{2\pi i k}{N}m),$ with eigenvalues $\lambda_k = X[k]$.
+\end{enumerate}
+
+\solspace
+
+\pagebreak
+
+\section{Z-Transform of Downsampled Signals}
+Fall 2018\\
+Let $y[n] = x[Nn]$. Show that the $z$-transform of this downsampled signal satisfies
+\begin{equation}
+    y[n] = x[Nn] \ZT Y(z) = \frac{1}{N}\sum_{k=0}^{N-1} X(W^k z^{1/N})
+\end{equation}
+here $X(z)$ is the $z$-transform of $\x$, and $W$ is a primitive $N^{th}$ root of unity, namely $W^N = 1$ and $W^k \neq 1$ for all $0 < k < N$.
+
+Use that result to argue that the DTFT transform downsampling relation is
+\begin{equation}
+    y[n] = x[Nn]  \DTFT Y(\omega) = \frac{1}{N} \sum_{k=0}^{N-1} X\left(\frac{\omega - 2\pi k}{N} \right)
+\end{equation}
+
+\solspace
+
+\pagebreak
+
+\section{Deterministic Correlation and Delay Detection}
+Fall 2018\\
+Denote the unit delay operator by $\sigma : \mathbb{C}^\mathbb{Z} \rightarrow \mathbb{C}^\mathbb{Z}$ by $()\sigma \x)[n] := x[n-1]$. For $\x, \y \in \ell_2^{\mathbb{Z}}$, define the associated deterministic autocorrelation and crosscorrelation sequences as
+\begin{align}
+    a_x[k] &:= \langle\x, \sigma^k \x \rangle = \sum_{n \in \mathbb{Z}} x[n] x[n-k]^* \\
+    c_{x,y}[k] &:= \langle\x, \sigma^k \y \rangle = \sum_{n \in \mathbb{Z}} x[n] y[n-k]^*
+\end{align}
+
+\textbf{(a)} Prove or counter the following statements (note the underlying field is $\mathbb{C}$)
+\begin{enumerate}
+    \item $a_x[k] = a_x[-k]^*$
+    \item $|a_x[k]| \leq a_x[0]$ for every $k \in \mathbb{Z}$
+    \item $c_{x,y}[k] = c_{y,x}[-k]^*$
+    \item $c_{x,y}[k] = c_{x,y}[-k]^*$
+    \item $C_{x,y}(\omega) = X(\omega)Y(\omega)^*$, where $\X,\Y,\C_{x,y}$ are the DTFTs of $\x,\y$ and $\cv_{x,y}$.
+\end{enumerate}
+
+\solspace
+
+A signal $\x \in \mathbb{R}^\mathbb{Z}$ whose support is bounded to $[0,...,N-1]$ is received by two antennas, each introduces a different gain and delay. The received signals $\x_1, \x_2$ are given by
+\begin{equation}
+    x_1[n] = \alpha_1 x_1[n - n_1], \qquad x_2[n] = \alpha_2 x[n-n_2].
+\end{equation}
+The constants $\alpha_1, \alpha_2 \in \mathbb{R}$ are gain coefficients and $n_1, n_2 \in \mathbb{Z}$ are delays, all unknown.
+
+\textbf{(b)} Based on the result from part a.ii, derive an algorithm to determine the time delay $\Delta := n_2 - n_1$ and the gain ratio $\rho = \frac{\alpha_1}{\alpha_2}$ given inputs $\x_1$ and $\x_2$.
+
+\solspace
+
+\textbf{(c)} Explain why the explicit delay values $n_1$ and $n_2$ cannot be determined, but only their difference $\Delta$. Is the same true for the gains $\alpha_1, \alpha_2$ ?
+
+\solspace
+
+\pagebreak
+\section{Interchange of Multirate Operations and Filtering}
+Fall 2018\\
+Consider the system given by the input output relation
+\begin{equation}
+    \y = D_2 A D_2 A D_2 A \x
+\end{equation}
+where $A$ is a convolution filter and $D_2$ downsamples by a factor of 2.
+
+\textbf{(a)} Using the multirate identities, find the simplest equivalent system of the form $\y = D_N H \x$, where $D_N$ is downsampling by $N$ and $H$ is a convolutional filter.
+Specify the downsampling factor $N$, and write $H$ in the z-transform and Fourier domains.
+
+\solspace
+
+\textbf{(b)} If $A$ is an ideal half-band lowpass filter, draw the DTFT $H(\omega)$, clearly specifying the cutoff frequencies.
+
+\solspace
+\vspace{4cm}
+
+\textbf{(c)} If $A$ is an ideal half-band highpass filter, draw the DTFT $H(\omega)$, clearly specifying the cutoff frequencies.
+
+\solspace
+
+\pagebreak
+
+\section{Computational Problem}
+Fall 2018\\
+The provided code in \verb|HW3.py| generates two samples $\x_1, \x_2 \in \mathbb{R}^{100}$ of some randomly shifted/scaled waveform based on your UIN (or any other number you input of the same length).
+
+Implement the algorithm you suggested in problem 3 to detect the shift and scale ratio between $\x_1$ and $\x_2$. Plot the input signals, their crosscorrelation, and estimated values, and comment on the results.
+Compare your estimated parameters with the true ones.
+
+\solspace
+
+
+\end{document}
