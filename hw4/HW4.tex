@@ -1,0 +1,183 @@
+\documentclass[12pt]{article}
+  
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb,bm,mathtools,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+\newcommand{\expect}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\av}{\mathbf{a}}
+\newcommand{\rv}{\mathbf{r}}
+\newcommand{\cv}{\mathbf{cv}}
+\newcommand{\C}{\mathbf{C}}
+\newcommand{\n}{\mathbf{n}}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\z}{\mathbf{z}}
+\newcommand{\0}{\mathbf{0}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\I}{\mathbf{I}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\Y}{\mathbf{Y}}
+
+\newcommand{\hdash}{\rule[.5ex]{1.5em}{0.4pt}}
+
+\newcommand{\DTFT}{\xleftrightarrow{\text{DTFT}}}
+\newcommand{\DFT}{\xleftrightarrow{\text{DFT}}}
+\newcommand{\ZT}{\xleftrightarrow{\text{ZT}}}
+
+
+\newcommand{\solspace}{\vspace{3mm} \textbf{Your Solution Here!} \vspace{3mm}}
+
+\begin{document}
+
+\lhead{ECE 551}
+\chead{PSET 4 - Uncertainty, Windows, and Filter Banks}
+\rhead{\today}
+ 
+\section{Uncertainty relation}
+%From \cite{1995_vetterli}\\
+Consider the uncertainty relation $\Delta_\omega^2 \Delta_t^2 \geq \pi/2$
+\begin{enumerate}
+    \item Show that scaling does not change $\Delta_\omega^2 \Delta_t^2$. Either use scaling that conserves the $\mathcal{L}_2$ norm ($f'(t) = \sqrt{a}f(a t)$) or be sure to renormalize $\Delta_\omega^2, \Delta_t^2$.
+    \item Can you give the time-bandwidth product of a rectangular pulse, $p(t) = 1, -1/2 \leq t \leq 1/2$, and 0 otherwise?
+    \item Same as above, but for a triangular pulse.
+    \item What can you say about the time-bandwidth product as the time-domain function is obtained from convolving more and more rectangular pulses with themselves?
+\end{enumerate}
+
+\solspace
+
+\pagebreak
+
+\section{Sinc Expansion Completeness}
+%Adapted from \cite{1995_vetterli}.
+
+One method for constructing an orthogonal basis is to take a complementary pair of ideal low and high pass filters, sinc functions of the form
+\begin{align*}
+    g_0[n] &= \frac{1}{\sqrt{2}}\cdot\frac{\sin((\pi/2)n))}{(\pi/2) n} \\
+    g_1[n] &= (-1)^n g_0[-n+1],
+\end{align*}
+and, combined with an offset, form a basis using all the even shifted  versions.
+Show that without the offset ``$+1$'', the basis is not complete in $\ell_2(\mathbb{Z})$. That is to say, find a sequence that cannot be represented by
+\begin{align*}
+    g_0[n] &= \frac{1}{\sqrt{2}}\cdot\frac{\sin((\pi/2)n))}{(\pi/2) n} \\
+    g_1[n] &= (-1)^n g_0[-n]
+\end{align*}
+and all even shifts.
+
+\textbf{Hint: } Consider trying to represent an odd function such as $y[n] = \sin(\pi/2 n)$
+
+\pagebreak
+
+\section{Truncation as an Orthogonal Projection}
+Fall 2018 \\
+Let $I \in \mathbb{Z}$ be an index subset. Define the truncation operator $T_I: \mathbb{C}^\mathbb{Z} \rightarrow \mathbb{C}^\mathbb{Z}$ by $(T_Ih)[t]$, where $w$ is the window indicator function of I.
+\begin{enumerate}
+    \item For $h \in \ell_2(\mathbb{Z})$, use the orthogonality principle to show that $\hat h := T_I h$ is the least-squares approximation (of $h$) whos support is limited to I.
+    \item Show that $T_I$ is an orthogonal projection in $\ell_2(\mathbb{Z})$.
+    \item Filter truncation is a lossy operation: the output $\hat h \ast x$ is perturbed from $h \ast x$. But by how much ? Show that the deviation sequence $D = \hat{h} \ast x - h \ast x$ is bounded by the bound below:
+    \begin{equation}
+        |D[n]| \leq \|x\|\|\hat h - h\|
+    \end{equation}
+    and conclude that the ratio $M := \frac{\|D\|_\infty}{\|x\|}$ is bounded. You may assume that $x$ and $h$ are absolutely summable (and bounded). \ \
+    \textbf{Optional: } determine whether $M$ attains its maximum.
+\end{enumerate}
+
+\pagebreak
+\section{Parseval's relation for Nonorthogonal Bases}
+%From \cite{1995_vetterli}\\
+Consider the space $V=\mathbb{R}^n$ and a biorthogonal basis, that is, two sets $\{\alpha_i\}$, $\{\beta_i\}$ such that
+\begin{equation}
+    \langle \alpha_i, \beta_j \rangle = \delta_{i,j} \qquad i,j = 0,1,...,n-1
+\end{equation}
+\begin{enumerate}
+    \item Show that any vector $v \in V$ can be written in the following two ways:
+    \begin{equation}
+        v = \sum_{i=0}^{n-1} \langle \alpha_i, v \rangle \beta_i = \sum_{i=0}^{n-1} \langle \beta_i, v \rangle \alpha_i
+    \end{equation}
+    \item Call $v_\alpha$ the vector with entries $\langle \alpha_i, v\rangle$ and similarly $v_\beta$ with entries $\langle \beta_i, v \rangle$. Given $\|v\|$, what can you say about $\|v_\alpha\|$ and $\|v_\beta\|$?
+    \item Show that the generalization of Parseval's identity to biorthogonal systems is
+    \begin{equation}
+        \|v\|^2 = \langle v, v \rangle = \langle v_\alpha, v_\beta \rangle
+    \end{equation}
+    and
+    \begin{equation}
+        \langle v, g \rangle = \langle v_\alpha, g_\beta \rangle
+    \end{equation}
+\end{enumerate}
+
+
+\pagebreak
+\section{Range-Finding Pulses (Computational)}
+In the previous homework, you observed that finding the delay between two signals is fairly straightforward using the cross-correlation.
+In this problem, you will explore different waveforms for a range-finding application. 
+Frequency shifts from the Doppler effect introduces significant additional complexity (frequency shifts and time shifts don't commute), for the purpose of most of this problem, we will ignore the issue and assume no Doppler shifts.
+
+In a radar environment, there may be multiple targets that reflect a given pulse, resulting in a system generating a multipath response represented by
+\begin{equation}
+    H = \sum_{i=0}^{N-1} \alpha_i\sigma_{t_i} \qquad t_i \in \mathbb{R}^+, \;\alpha_i \in (-1,1),
+\end{equation}
+where $\sigma_d$ is a delay by $d$, and $\alpha_i$ represents some attenuation of the signal.
+The set of $\{\alpha_i\}$ simply lump together the different losses from both propagation and the imperfect reflection from the targets.
+
+\textbf{Goal: } Identify each element of $\{\sigma_i\}$ in the system.
+
+\textbf{Q1: } Suppose $N=1$ (representing a single reflection), how would you apply your algorithm from homework 3 to identify $\sigma_0$?
+What happens when $t_i \notin \mathbb{Z}$?
+
+\solspace
+
+\textbf{Q2: } Now assume $N>1$, how would you extend your algorithm to identify all $t_i$?
+This doesn't need to be optimal in any sense, just pick something that seems reasonable.
+
+\solspace
+
+\textbf{Q3: } Implement your algorithm from Q2 and apply it to data generated by the provided function.
+How well does it work? What seem to be the issues?
+What happens as you adjust the distribution of $t_i$ such that the delays are clustered more tightly?
+
+\solspace
+
+There are actually a couple of issues at play.
+While we haven't formally covered noise yet, we can see that the noise seems to blur together the peaks of the cross-correlation.
+
+\textbf{Q4: } Given no physical constraints, what is the optimal waveform for time localization (assuming operation in continuous time)? What is the associated time-frequency trade-off?
+
+\solspace
+
+\textbf{Q5: } Ultra-wide bandwidth electronics are very complicated, can be very expensive to produce, and can interfere with other items sharing the spectrum. For this reason, consider limiting your bandwidth to a fixed width $B$. How would you adjust your answer to Q4 to account for this constraint?
+
+\solspace
+
+\textbf{Q6: } Now that we have a finite bandwidth, we may as well operate in discrete time. Fix the amount of energy in the signal, and simulate the application of your algorithm from Q2 applied to pulses of the form of your response to Q5.
+
+\solspace
+
+Unfortunately, you may additionally have some form of instantaneous power constraint, or, related, a maximum voltage constraint on the electronics.
+
+\textbf{Q7: } How would you preserve the desired time-bandwidth trade-off while satisfying a maximum amplitude constraint (i.e. $x(t) \leq P$ for all $t$)? Hint: What happens to the phase when we compute an autocorrelation of a signal? Alternatively, think about the relationship between an STFT and the Fourier Transform of the entire sequence. 
+
+\solspace
+
+\textbf{Q8: } Write a script that generates pulses of the form described in Q7, include a plot of the waveform.
+
+\solspace
+
+\textbf{Q9: } Finally, apply the algorithm to the pulses in your response. Compare the behavior to sinusoids with rectangular, triangular, and Hanning windows.
+Include plots of the cross-correlation in simulation for all four.
+
+\solspace
+
+
+\pagebreak
+%\bibliographystyle{../../SharedFiles/IEEEbib}
+%\bibliography{../../SharedFiles/refs.bib}
+
+\end{document}
