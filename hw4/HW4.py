@@ -27,8 +27,8 @@ def H(x, N, spread, noise_power, targets=None):
 
 # settings
 N = 4
-spread = 100
-noise_power = 1e-3
+spread = 200
+noise_power = 5e-3
 signal_power = 5e-1
 L = 128
 freq = np.pi / 4
