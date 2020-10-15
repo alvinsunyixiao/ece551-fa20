@@ -15,12 +15,17 @@ def parse_args():
                         help='order of the synthesis filter')
     parser.add_argument('--window', type=float, default=10e-3,
                         help='window duration in [s]')
+    parser.add_argument('-o', '--output', type=str, default='out.wav',
+                        help='path to store the output wav file')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
     fs, data = wavfile.read(args.input)
+    data = data.astype(np.float) / (1 << 15)
+    data_synth = np.zeros_like(data)
     # pad 0s in front of the data for performing linear prediction
+    data_pad_left = np.pad(data, [args.order, 0])
     frame_size = int(fs * args.window)
     num_frames = data.shape[0] // frame_size
     # construct Yule-Walker matrix index
@@ -29,32 +34,19 @@ if __name__ == '__main__':
     # error / excitation signal
     data_err = np.zeros_like(data)
     # solve for each frame
-    #for i in trange(num_frames):
-    i = 3
-    win_data = data[i*frame_size: (i+1)*frame_size]
-    win_data_pad = np.pad(win_data, [0, args.order])
-    win_corr = np.correlate(win_data_pad, win_data, 'valid')
-    # solve for filter coefficients
-    alpha = np.linalg.solve(win_corr[YW_idx], win_corr[1:])
-    # linear prediction
-    win_data_left = np.pad(win_data, [args.order, 0])
-    win_data_pred = np.convolve(win_data_left[:-1], alpha, 'valid')
-    # calculate error signal
-    data_err[i*frame_size: (i+1)*frame_size] = win_data - win_data_pred
+    for i in trange(num_frames):
+        win_data = data[i*frame_size: (i+1)*frame_size]
+        win_data_pad = np.pad(win_data, [0, args.order])
+        win_corr = np.correlate(win_data_pad, win_data, 'valid')
+        # solve for filter coefficients
+        alpha = np.linalg.solve(win_corr[YW_idx], win_corr[1:])
+        # linear prediction
+        win_data_left = np.pad(win_data, [args.order, 0])
+        win_data_left = data_pad_left[i*frame_size: (i+1)*frame_size + args.order]
+        win_data_pred = np.convolve(win_data_left[:-1], alpha, 'valid')
+        # calculate error signal
+        data_err[i*frame_size: (i+1)*frame_size] = win_data - win_data_pred
+        # synthesis
+        data_synth[i*frame_size: (i+1)*frame_size] = signal.lfilter([1.], np.hstack([[1.], -alpha]), win_data - win_data_pred)
 
-    plt.figure()
-    plt.subplot(511)
-    plt.plot(win_data)
-    plt.subplot(512)
-    plt.plot(np.abs(np.fft.rfft(win_data)))
-    plt.subplot(513)
-    plt.stem(alpha)
-    plt.subplot(514)
-    w, h = signal.freqz([1], np.hstack([[1], -alpha]))
-    plt.plot(w, np.abs(h))
-    plt.subplot(515)
-    plt.plot(win_data_pred)
-    plt.show()
-
-    #plt.plot(np.arange(data.shape[0]) / fs, data_err)
-    #plt.show()
+    wavfile.write(args.output, fs, data_synth)
