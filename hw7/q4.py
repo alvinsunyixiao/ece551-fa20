@@ -2,6 +2,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 
+from scipy import signal
 from scipy.io import wavfile
 from scipy.linalg import solve_circulant, circulant
 from tqdm import trange
@@ -42,14 +43,17 @@ if __name__ == '__main__':
     data_err[i*frame_size: (i+1)*frame_size] = win_data - win_data_pred
 
     plt.figure()
-    plt.subplot(411)
+    plt.subplot(511)
     plt.plot(win_data)
-    plt.subplot(412)
-    plt.plot(win_data_pred)
-    plt.subplot(413)
+    plt.subplot(512)
+    plt.plot(np.abs(np.fft.rfft(win_data)))
+    plt.subplot(513)
     plt.stem(alpha)
-    plt.subplot(414)
-    plt.plot(win_data - win_data_pred)
+    plt.subplot(514)
+    w, h = signal.freqz([1], np.hstack([[1], -alpha]))
+    plt.plot(w, np.abs(h))
+    plt.subplot(515)
+    plt.plot(win_data_pred)
     plt.show()
 
     #plt.plot(np.arange(data.shape[0]) / fs, data_err)

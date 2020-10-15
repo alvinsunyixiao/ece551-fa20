@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+from scipy import stats
 from scipy.io import wavfile
 from tqdm import trange
 
@@ -11,9 +12,9 @@ def parse_args():
                         help='path to the input wav file')
     parser.add_argument('-o', '--output', type=str, default='out.png',
                         help='path to store the output image')
-    parser.add_argument('--window', type=float, default=100e-3,
+    parser.add_argument('--window', type=float, default=40e-3,
                         help='duration of the window in [s]')
-    parser.add_argument('--skip', type=float, default=50e-3,
+    parser.add_argument('--skip', type=float, default=20e-3,
                         help='duration of skip in [s]')
     return parser.parse_args()
 
@@ -35,9 +36,9 @@ if __name__ == '__main__':
         win_data_fft_abs = np.abs(win_data_fft)
         win_data_fft_abs_med = np.median(win_data_fft_abs)
         win_data_fft_abs_std = np.std(win_data_fft_abs)
-        win_data_fft_dev = np.abs((win_data_fft_abs - win_data_fft_abs_med) / win_data_fft_abs_std)
-        win_data_likely_false = (win_data_fft_dev - 2.) / 3 * (-.9) + .95
-        win_data_likely_false = np.clip(win_data_likely_false, 0.05, 0.95)
+        win_data_fft_dev = (win_data_fft_abs - win_data_fft_abs_med) / win_data_fft_abs_std
+        win_data_likely_false = stats.norm.cdf(win_data_fft_dev + 2) - \
+                                stats.norm.cdf(win_data_fft_dev - 2)
         win_data_likely_true = 1 - win_data_likely_false
         # bayesian update
         win_data_true = win_data_likely_true * win_data_prior_true + 1e-10
@@ -48,7 +49,7 @@ if __name__ == '__main__':
         # put decision into result buffer
         occupation[:, i] = win_data_prior_true
 
-    plt.imshow(occupation, origin='lower', aspect='auto',
+    plt.imshow(occupation, 'gray', origin='lower', aspect='auto',
                extent=[0, num_frames * args.skip, 0, fs / 2])
     plt.title('Time Frequency Occupation')
     plt.xlabel('Time [s]')
