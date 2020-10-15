@@ -31,6 +31,8 @@ if __name__ == '__main__':
     YW_idx = np.abs(i - j)
     # pitch phase tracking
     phase_last = 0
+    # IIR filter initial state
+    zi = np.zeros(args.order)
     # minimum pitch index @ 250Hz
     p_min = fs // 250
     # solve for each frame
@@ -54,6 +56,7 @@ if __name__ == '__main__':
         # synthesis
         if win_corr_full[pitch_idx] / corr_0 > .25: # voiced frame
             excitation = np.zeros_like(e)
+            # generate impulse train
             pulse_idx = (phase_last + pitch_idx) % frame_size
             while True:
                 excitation[pulse_idx] = 1
@@ -63,10 +66,10 @@ if __name__ == '__main__':
                     break
         else: # unvoiced frame
             excitation = np.random.randn(e.shape[0])
-        # normalize with energy
+        # normalize by energy
         excitation = excitation * np.sqrt(np.sum(np.square(e)) / np.sum(np.square(excitation)))
         # sythesis
-        y_hat = signal.lfilter([1.], np.hstack([[1.], -alpha]), excitation)
+        y_hat, zi = signal.lfilter([1.], np.hstack([[1.], -alpha]), excitation, zi=zi)
         data_synth[i*frame_size: (i+1)*frame_size] = y_hat
 
     wavfile.write(args.output, fs, data_synth)
