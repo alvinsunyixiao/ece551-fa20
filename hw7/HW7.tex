@@ -1,0 +1,184 @@
+\documentclass[12pt]{article}
+  
+\usepackage[margin=1in]{geometry} 
+\usepackage{amsmath,amsthm,amssymb,bm,mathtools,scrextend}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{listings}
+
+\newcommand{\expect}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\av}{\mathbf{a}}
+\newcommand{\rv}{\mathbf{r}}
+\newcommand{\cv}{\mathbf{cv}}
+\newcommand{\C}{\mathbf{C}}
+\newcommand{\n}{\mathbf{n}}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\z}{\mathbf{z}}
+\newcommand{\0}{\mathbf{0}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\I}{\mathbf{I}}
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\Y}{\mathbf{Y}}
+
+\newcommand{\hdash}{\rule[.5ex]{1.5em}{0.4pt}}
+
+\newcommand{\DTFT}{\xleftrightarrow{\text{DTFT}}}
+\newcommand{\DFT}{\xleftrightarrow{\text{DFT}}}
+\newcommand{\ZT}{\xleftrightarrow{\text{ZT}}}
+
+\newcommand{\range}{\text{rng}}
+\newcommand{\trace}{\text{Tr}}
+\DeclareMathOperator*{\argmin}{\text{argmin}}
+\DeclareMathOperator*{\argmax}{\text{argmax}}
+
+
+\newcommand{\solspace}{\vspace{3mm} \textbf{Your Solution Here!} \vspace{3mm}}
+
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{codeblue}{rgb}{0,0,0.6}
+\definecolor{codered}{rgb}{0.5,0,0}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.95}
+
+\lstdefinestyle{pythonStyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    emphstyle=\color{codered},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=pythonStyle}
+
+\begin{document}
+
+\lhead{ECE 551}
+\chead{PSET 7 - Estimation}
+\rhead{\today}
+\section{Minimax Estimation}
+Recall the minimax example in the lecture notes.
+Define a sequence of i.i.d. Bernoulli random variables $\{b_i\}_{i=1}^N$, each taking the value 1 with probability $p$ and 0 with probability $1-p$.
+Consider estimators of the form
+\begin{equation}
+    \hat{p}_\beta = \frac{\beta + \sum_{i=1}^N b_i}{2\beta + N},
+\end{equation}
+which give an approximation of the parameter $p$.
+We wish to choose $\beta$ in a way that minimizes the worst case mean squared error, that is to say
+\begin{equation}
+    \beta_{minimax} = \argmin_{\beta} \max_{p \in [0,1]} \expect{(\hat{p}_\beta - p)^2 | p}.
+\end{equation}
+
+This is a simple enough problem that we can compute the parameter directly.
+
+\textbf{(a)} Notionally, $p$ is decided as a function of $\beta$.
+Please identify the function
+\begin{equation}
+    C(\beta) = \max_{p \in [0,1]} \expect{(\hat{p}_\beta - p)^2 | p},
+\end{equation}
+which represents our worst case cost for a chosen $\beta$.
+
+\solspace
+
+\textbf{(b)} Now, minimize our worst case error
+\begin{equation}
+    \beta_{minimax} = \argmin_\beta C(\beta)
+\end{equation}
+
+\solspace
+
+\textbf{(c)} For $\beta$ chosen above, what is the MSE as a function of $p$? \\
+\textit{Hint: This is somewhat of a trick question}
+
+\solspace
+
+
+\pagebreak
+\section{Kalman Filter}
+This problem builds off of some of the notions in the previous homework about linear dynamical systems.
+Suppose we have a system
+\begin{align}
+    x_{n+1} &= F x_n + u_n \\
+    y_n &= H x_n + v_n,
+\end{align}
+where $x_0 = \0$ (this is a slightly different definition from the previous problem set due to an indexing issue).
+Let $u_n \overset{iid}{\sim} \mathcal{N}(0,Q)$, and $v_n \overset{iid}{\sim} \mathcal{N}(0,R)$.
+
+In this problem, you will derive the MMSE estimator of the state $x_i \in \mathbb{R}^N$ given the set of observations $\{y_j \in \mathbb{R}^M\}_{j=1}^{i}$ 
+
+The Kalman filter is generally broken into two steps, a prediction step, and an update step.
+The orthogonality principle will be used throughout.
+
+If you have trouble with the general cases, start with the first couple of timesteps before trying to generalize. \\
+
+\textbf{(a)} What is the MMSE linear predictor $\hat{x}_{i+1|i}$ given the previous data? That is to say, the MMSE estimator of $x_{i+1}$ given observations $\{y_1,...,y_i\}$.\\
+For the sake of this problem, assume that you have the MMSE linear estimator for timestep $i$, denoted $\hat{x}_{i|i}$.
+
+\solspace
+
+\textbf{(b)} In order to use the predictor in the previous part, we need the MMSE linear estimator of $x_i$ given $\{y_1,...,y_i\}$. Using the fact that we have the MMSE linear predictor $\hat{x}_{i|i-1}$ (which is time-independent), what is the MMSE linear estimator $\hat{x}_{i|i}$?
+
+\solspace
+
+\textbf{(c)} We seem to have a bit of a chicken and egg problem here. To predict, we need to estimate. To estimate, we need to predict.
+We need a base case to resolve this problem.
+What is the best linear estimator of $x_1$ given the observation $y_1$?
+
+\solspace
+
+\textbf{(d)} For good measure, please verify that your solutions for parts (a) and (b) are indeed the MMSE estimators of $x_2$. 
+This completes the base case for our inductive estimator.
+
+\solspace
+
+
+
+\pagebreak
+\section{Frequency Band Occupancy (Computational)}
+Consider designing a wireless communication system.
+Your communication link is not isolated in the environment, there are other similar devices trying to communicate in the same general frequency band.
+For this reason, you wish to infer which frequency bands are occupied in order to minimize inter-channel interference.
+
+Fortunately, each of these devices only occupy a relatively narrow frequency band.
+Unfortunately, links can hop between frequency bands, start, or stop seemingly randomly.
+
+You may consider the sampled received signal to be of the form
+\begin{equation}
+    y[n] = w[n] + \sum_{i=1}^N x_i[n],
+\end{equation}
+where the number of signals $N$ is unknown and each $x_i \in BL(-B_i,B_i)$ is an unknown, but approximately bandlimited function of a potentially finite non-zero length.
+Assume $w[n] \overset{i.i.d.}{\sim} \mathcal{N}(b,\sigma^2)$ be a random process comprised of (possibly non-zero) Gaussian noise with variance $\sigma^2$.
+
+Please design an algorithm that, given a stream of data, attempts to determine the set of occupied frequency bands \textit{using only the prior data}.
+
+We have provided a data file (containing amplitude modulated speech).
+Please run your algorithm on the file and provide an image displaying the results.
+Additionally, please provide a statistical analysis and justification of your algorithm.
+
+\pagebreak
+\section{Linear Predictive Coding (Computational)}
+Implement a linear predictive coding system using 10 ms frames of data as described in class.
+Apply it with orders $p \in \{6,12,20,50\}$ to the provided speech file or your own recording.
+
+
+\end{document}
