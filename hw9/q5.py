@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 FIR_FILT = np.random.randn(10)
 
 
-def lms_filter(data, mu=0.005):
+def lms_filter(data, mu=0.01):
     output = np.zeros(data.shape[0] - FIR_FILT.shape[0], dtype=np.float)
     estimate = np.zeros_like(output)
     mse = np.zeros_like(output)
@@ -61,8 +61,8 @@ def parse_args():
                         help='number of data samples to simulate (default to 1000)')
     parser.add_argument('-m', '--method', type=str, choices=['lms', 'rls'], default='lms',
                         help='which adaptive algorithm to use for optimization (default to lms)')
-    parser.add_argument('--mu', type=float, default=5e-3,
-                        help='gradient descent rate for LMS algorithm (default to 5e-3)')
+    parser.add_argument('--mu', type=float, default=1e-2,
+                        help='gradient descent rate for LMS algorithm (default to 1e-2)')
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='exponential weighting of RLS algorithm (default to 0.5)')
     parser.add_argument('--delta', type=float, default=1e-3,
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     plt.subplot(211)
     plt.plot(mse)
     plt.ylabel('MSE')
-    plt.title(f'MSE Covergence with {args.method.upper()} Algorithm')
+    plt.title(f'MSE Covergence')
 
     # plot weight trajectory
     plt.subplot(212)
@@ -94,4 +94,10 @@ if __name__ == '__main__':
     plt.xlabel('sample')
     plt.ylabel('Weight')
     plt.legend()
+
+    if args.method == 'lms':
+        plt.suptitle('LMS Alorithm with $\\mu$ = {}'.format(args.mu))
+    else:
+        plt.suptitle('RLS Alorithm with $\\alpha$ = {}, $\\delta$ = {}'.format(args.mu, args.delta))
+
     plt.show()
