@@ -1,0 +1,130 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage[legalpaper, margin=1in]{geometry}
+
+\title{A Review on \\
+  Data-Driven Discovery of Coordinates and Governing Equations \cite{Champion22445}}
+\author{Alvin Sun}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  System identification remains one of the most important areas in control and
+  signal processing. The importance comes from the fact that many system in practice
+  has unknown governing equations, which makes applying classical control algorithms
+  much harder. This work presented a way of estimating the underlying dynamics
+  of arbitrary non-linear systems purely from measurement data, without any pre-assumptions
+  on the form of equations. The author combined techniques in
+  Sparse Identification of Nonlinear Dynamics (SINDy) with autoencoder neural networks
+  to jointly estimate both the governing equation and the latent coordinate space.
+  As a result, this method can identify non-linear low-dimensional governing equation
+  from a much higher dimensional measurements dataset.
+\end{abstract}
+
+\section{Introduction}
+
+Many classical and modern control theories are built around systems with known dynamics.
+Example from as simple as controlling an inverted pendulum to as complicated
+as manipulating space crafts all require knowledge of the underlying governing equations
+of those sytems. However, in practice, due to limitations such as fabrication precision,
+physical phenomenon like thermal expansion, system can have unknown or even changing
+dynamics. Accurately estimating those dynamics become a crucial part in control problems.
+Recent years of rapid development in digital computing and sensing devices has made high
+quality measurement data more readily available, which opened up many possibilities for
+discovering dynamics equations from data. While control and estimation theories around
+linear systems are relatively well developed, estimating for non-linear systems remains
+a difficult problem especially when we have absolutely no knowledge about the equations.
+This also motivated researchers to come up with some methodology that can generically
+recover arbitrary governing equations without any pre-assumptions.
+
+\section{Background}
+
+\subsection{Nonlinear System Identification}
+
+The main objective is to determin an unknown function $f$ in a dynamic system
+\begin{gather}
+  \dot{x}= f(x)
+\end{gather}
+There are quite a few popular algorithms developed around
+this data driven system ID problem.
+Two of the popular ones are Dynamic Mode Decomposition (DMD) \cite{schmid2010dynamic} and
+its varient eDMD \cite{williams2015data}, both of which use singular value decompositions to
+approximate the dominating modes of a system. SINDy \cite{brunton2016discovering}
+(Sparse Identification of Nonlinear Dynamics) is another one of the recent work which
+uses sparse regression techniques to find coefficients for a finite number of nonlinear
+terms in a dynamics equation. It approximates the Koopman Operator space by pre-defining
+a finite number of nonlinear terms,
+\begin{gather}
+  \theta(x) = [\theta_1(x),\cdots,\theta_n(x)]^T
+\end{gather}
+such that the dynamical equation can be approximated through a linear function on
+these nonlinear terms.
+\begin{gather}
+  \dot{x} \approx A \theta(x)
+\end{gather}
+where $A$ is a sparse coefficient matrix. The coefficients are then discovered
+by performing a least square fit given measurements $x$ and $\dot{x}$. To ensure sparsity,
+an $\mathcal{L}_1$ norm is added to the fitting process to encourage the optimization to
+pick as fewer terms as possible.
+
+\subsection{Neural Network and Autoencoder}
+
+Autoencoder architectures are well known for its capability in compression
+and latent space extraction. The training procedure automatically ensures
+compressibility and reconstructability. Using large number of neurons also enables
+neural networks to learn arbitrary nonlinear transformations.
+
+\section{Methodologies}
+
+An autoencoder neural network is used to transform measurement input from potentially high
+dimensional space to a low dimensional "latent space." A dictionary of nonlinearity terms
+are then constructed on such latent space. And then SINDy algorithm is invoked on
+the latent space variables to learn a sparse governing equation. The author proposed
+that those two stages can actually be trained jointly, which yields an overall loss function,
+\begin{gather}
+  \mathcal{L} = \lambda_1\mathcal{L}_{encoder} +
+                \lambda_2\mathcal{L}_{sindy} +
+                \lambda_3\mathcal{L}_{reg}
+\end{gather}
+where $\mathcal{L}_{encoder}$ is the autoencoder reconstruction loss, $\mathcal{L}_{sindy}$ is the
+SINDy linear dynamics fitting loss, and $\mathcal{L}_{reg}$ is the $\mathcal{L}_1$
+regularization loss to encourage sparsity. To further constraint on sparsity, progressive
+thresholding techniques, used by the original SINDy algorithm, are also used here.
+This technique is essentially progressively dropping out low-magnitude coefficients
+during training.
+
+\section{Results and Impact}
+
+This SINDY + autoencoder method successfully identified the following systems
+\begin{enumerate}
+  \item Lorenze Attractor -- a simple but chaotic system
+  \item Reaction Diffusion -- a high-dimensional fluid dynamics governed by a spatial temporal PDE
+  \item Pendulumn In Video -- a high-dimensional dataset with low dimensional nonlinear dynamics
+\end{enumerate}
+The major impact of this algorithm is the ability to automatically extract
+low-dimensiona latent coordinate space in a dynamics-aware fasion. It also leverages
+the sparse fitting aspect of SINDy, which provdied interpretable results trained from a neural
+network.
+
+\section{Discussion}
+
+The drawback of this method (along with the original SINDy) is that it requires a dictionary
+of nonlinear terms prepared a head of time. For example, if we know the system contains
+polynomials up to some order, or sinusoidal nonlinearity, then we can construct a dictionary
+to include those terms. However, all possible nonlinearities are just too many to include them
+all. We can consider leverage the learning ability of the autoencoder to directly extract
+a dictionary function and perform sparse regression on top of that learned dictionary.
+
+\newpage
+
+\bibliography{citations}
+\bibliographystyle{ieeetr}
+
+\end{document}
