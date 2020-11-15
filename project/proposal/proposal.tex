@@ -1,0 +1,117 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{enumitem}
+
+\usepackage[legalpaper, margin=1in]{geometry}
+
+\title{ECE 551 \\ Final Project Proposal \\ Nonlinear System Identification with Linear Control}
+\author{Alvin Sun}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  I propose to build on top of \cite{lusch2018deep}, using an autoencoder-like neural network
+  to transform arbitrary nonlinear system into an latent space where the dynamics
+  become approximately linear. In addition to the original paper, I propose to extend their
+  system identification framework to incorporate external inputs data. Using a similar
+  network archiecture, we can learn a set of coordinate system where the control
+  laws are also linear, and therefore we can apply well developed linear control algorithms
+  with closed form solutions.
+\end{abstract}
+
+\section{Motivation}
+
+Control is one of the areas that relate most to our everday lives. It is often time of our
+interests to manipulate machines like robotic arms, cars, and even aircrafts. In order
+to robustly control those systems, most of the modern control algorithms require the knowledge
+of the dynamical system. However, due to practical reasons, many real world dynamical
+systems have unknown or even time varying dynamics. Therefore, system identification is
+one of the most important areas that enables accurate and robust control. Most of the dynamical
+systems are nonlinear in nature, which introduces many difficulties in both identifying
+and controlling them. There are quite a few recent work such as \cite{brunton2016discovering}
+and \cite{Champion22445} which addresses the identification of nonlinear systems. However,
+controlling nonlinear systems in real time remains a hard problem given its
+complexity when formulated as numerical optimization problem. As a result, it motivated
+me to come up with some method that not only identify nonlinear system dynamis, but also
+draw connections to linear control theories.
+
+\section{Project Detail}
+
+In this project, I specifically aim at solving discrete dynamical systems, because digital control
+cannot operate in continuous time. In other words, the project is about identifying
+and controlling systems that can be characterized by Equation~\ref{eqa:discrete}.
+\begin{gather}\label{eqa:discrete}
+  x_{k+1} = f(x_k, u_k)
+\end{gather}
+By Koopman Theory, there exists infinite dimensional linear operators, $\mathcal{A}$ and
+$\mathcal{B}$, and some infinite dimensional nonlinear functions $g$ and $h$, such that
+\begin{gather}
+  g(x_{k+1}) = \mathcal{A} g(x_k) + \mathcal{B} h(x_k, u_k)
+\end{gather}
+I propose to inherit the autoencoder structure from \cite{lusch2018deep}, but in addition
+to approximating for $g$ and $\mathcal{A}$, we also need to estimate for $h$ and $\mathcal{B}$
+due to introducing the control inputs. Let $A$ and $B$ denotes the finite dimensional
+approximation of $\mathcal{A}$ and $\mathcal{B}$, then $A$ and $B$ can be explicitly learned
+while $g$ and $h$ can be approximated using neural networks. Let $z_k = g(x_k)$ and
+$v_k = h(x_k, u_k)$ be the states and control inputs in the latent coordinates system. Then
+we have an approximated linear dynamical system
+\begin{gather}
+  z_{k+1} \approx A z_k + B v_k
+\end{gather}
+Then we can derive control laws $v_k$ by regulating $z_k$ to a desirable terminal states.
+Since this latent space dynamics is approximately linear, we can apply linear control
+theories to this system. More specifically, I propose to implement a linear
+model predictive controller on the latent space, where the optimal control inputs
+can be calculated using the Riccati equation.
+
+\section{Project Deliverable}
+The project aims at delivering a successful simulation on swing up stabilization of a cartpole
+pendulum system with unknown dynamics. If time permits, I would also like to push towards
+a cartpole double pendulum swing up controller with unknown dynamics. The latter one is
+especially harder due to higher degree of underactuation.
+
+\section{Proposed Timeline}
+
+\begin{description}[align=left, leftmargin=*]
+  \item [11/09 - 11/15] \hfill
+    \begin{itemize}
+      \item Implement infrastructure codes for simulating a variety of dynamics
+            models including simple pendulums, cart, cartpole pendulum
+      \item Implement infrastructure codes for generating ground truth data with white-noise inputs
+      \item Implement autoencoder neural network and setup a data flow / training pipeline
+        for system identification process
+    \end{itemize}
+
+  \item [11/16 - 11/22] \hfill
+    \begin{itemize}
+      \item Experiment with different hyperparameters
+      \item Compute quantitative metrics for system identification performance
+      \item Implement a model predictive controller for simple pendulum swing up
+    \end{itemize}
+
+  \item [11/23 - 11/29] \hfill
+    \begin{itemize}
+      \item Implement linear model predictive control using Riccati equation
+      \item Replicate swing up stablization controller using linear control on
+        an identified pendulumn
+    \end{itemize}
+
+  \item [11/23 - 11/29] \hfill
+    \begin{itemize}
+      \item Finish up the more complicated cartpole pendulum control.
+      \item Final write up and bonus double pendulum control.
+    \end{itemize}
+\end{description}
+
+\newpage
+
+\bibliography{citations}
+\bibliographystyle{ieeetr}
+
+\end{document}
