@@ -7,7 +7,7 @@
 \usepackage[legalpaper, margin=1in]{geometry}
 
 \title{A Review on \\
-  Data-Driven Discovery of Coordinates and Governing Equations \cite{Champion22445}}
+  Deep Learning for Universal Linear Embeddings of Nonlinear Dynamics \cite{lusch2018deep}}
 \author{Alvin Sun}
 \date{\today}
 
@@ -20,12 +20,13 @@
   signal processing. The importance comes from the fact that many system in practice
   has unknown governing equations, which makes applying classical control algorithms
   much harder. This work presented a way of estimating the underlying dynamics
-  of arbitrary non-linear systems purely from measurement data, without any pre-assumptions
-  on the form of equations. The author combined techniques in
-  Sparse Identification of Nonlinear Dynamics (SINDy) with autoencoder neural networks
-  to jointly estimate both the governing equation and the latent coordinate space.
-  As a result, this method can identify non-linear low-dimensional governing equation
-  from a much higher dimensional measurements dataset.
+  of arbitrary non-linear systems purely from measurement data. The authors utilized an
+  autoencoder neural network to learn an parsimonious and interpretable dynamical
+  represenation inside the approximated Koopman Operator space, where the dynamics
+  are globally linearized by Koopman Theory. The network archiecture jointly
+  learns the intrinsic coordinate transformation and a linear transition matrix.
+  This work opened up possibilities in applying linear control and estimation
+  theories to nonlinear systems.
 \end{abstract}
 
 \section{Introduction}
@@ -40,9 +41,9 @@ Recent years of rapid development in digital computing and sensing devices has m
 quality measurement data more readily available, which opened up many possibilities for
 discovering dynamics equations from data. While control and estimation theories around
 linear systems are relatively well developed, estimating for non-linear systems remains
-a difficult problem especially when we have absolutely no knowledge about the equations.
+a difficult problem especially when we have absolutely no a priori knowledge about the equations.
 This also motivated researchers to come up with some methodology that can generically
-recover arbitrary governing equations without any pre-assumptions.
+recover arbitrary governing equations while relating to linear control and estimation theories.
 
 \section{Background}
 
@@ -52,75 +53,77 @@ The main objective is to determin an unknown function $f$ in a dynamic system
 \begin{gather}
   \dot{x}= f(x)
 \end{gather}
+For the discrete case, the dynamics can be represented as
+\begin{gather}\label{eqa:discrete}
+  x_{k+1} = F(x_k)
+\end{gather}
 There are quite a few popular algorithms developed around
 this data driven system ID problem.
 Two of the popular ones are Dynamic Mode Decomposition (DMD) \cite{schmid2010dynamic} and
 its varient eDMD \cite{williams2015data}, both of which use singular value decompositions to
-approximate the dominating modes of a system. SINDy \cite{brunton2016discovering}
-(Sparse Identification of Nonlinear Dynamics) is another one of the recent work which
-uses sparse regression techniques to find coefficients for a finite number of nonlinear
-terms in a dynamics equation. It approximates the Koopman Operator space by pre-defining
-a finite number of nonlinear terms,
+approximate the dominating modes of a system. Both of the methods are also built
+around Koopman Theory, which states that any nonlinear dynamics can be transformed
+into linear dynamics inside an inifinite dimension Hilber space of possible nonlinear
+measurements $y = g(x)$. Then the state transition can be expressed as a Koopman Operator,
+$\mathcal{K}$, which is an inifinite dimensional linear operator.
 \begin{gather}
-  \theta(x) = [\theta_1(x),\cdots,\theta_n(x)]^T
+  y_{k+1} = \mathcal{K}y_k \implies g(x_{k+1}) = \mathcal{K}g(x_k)
 \end{gather}
-such that the dynamical equation can be approximated through a linear function on
-these nonlinear terms.
-\begin{gather}
-  \dot{x} \approx A \theta(x)
-\end{gather}
-where $A$ is a sparse coefficient matrix. The coefficients are then discovered
-by performing a least square fit given measurements $x$ and $\dot{x}$. To ensure sparsity,
-an $\mathcal{L}_1$ norm is added to the fitting process to encourage the optimization to
-pick as fewer terms as possible.
+Many methods, including this paper, are developed around
+approximating this $\mathcal{K}$ operator with finite dimensional matrices.
 
 \subsection{Neural Network and Autoencoder}
 
 Autoencoder architectures are well known for its capability in compression
 and latent space extraction. The training procedure automatically ensures
-compressibility and reconstructability. Using large number of neurons also enables
-neural networks to learn arbitrary nonlinear transformations.
+compressibility and reconstructability of the instrinsics measurement coordinates.
+Using large number of neurons also enables neural networks to learn arbitrary nonlinear
+transformations. Therefore, it is possible to learn a finite number of nonlinear
+transformations that well approximate the dominant modes in $\mathcal{K}$.
 
 \section{Methodologies}
 
-An autoencoder neural network is used to transform measurement input from potentially high
-dimensional space to a low dimensional "latent space." A dictionary of nonlinearity terms
-are then constructed on such latent space. And then SINDy algorithm is invoked on
-the latent space variables to learn a sparse governing equation. The author proposed
-that those two stages can actually be trained jointly, which yields an overall loss function,
+This paper focuses on solving for discrete systems as shown in Equation~\ref{eqa:discrete}.
+An autoencoder neural network is used to transform measurement input $x_k$
+from potentially high dimensional space to a low dimensional ``latent space'' of
+nonlinear measurements $z_k$. The coordinate transformation can then be expressed as
 \begin{gather}
-  \mathcal{L} = \lambda_1\mathcal{L}_{encoder} +
-                \lambda_2\mathcal{L}_{sindy} +
-                \lambda_3\mathcal{L}_{reg}
+  z_k = \varphi(x_k) \\
+  x_k \approx \phi(z_k)
 \end{gather}
-where $\mathcal{L}_{encoder}$ is the autoencoder reconstruction loss, $\mathcal{L}_{sindy}$ is the
-SINDy linear dynamics fitting loss, and $\mathcal{L}_{reg}$ is the $\mathcal{L}_1$
-regularization loss to encourage sparsity. To further constraint on sparsity, progressive
-thresholding techniques, used by the original SINDy algorithm, are also used here.
-This technique is essentially progressively dropping out low-magnitude coefficients
-during training.
+where $\varphi$ and $\phi$ are the encoder and decoder respectively.
+The reconstruction is ensured by imposing $\|x_k - \phi(\varphi(x_k))\|_2$ as a loss function.
+A linear state transition matrix $K$ that satisfies
+\begin{gather}
+  z_{k+1} = K z_k
+\end{gather}
+is also learned by penalizing on m-step future
+predictions in both the transformed coordinates and the original coordinates. Namely, the
+related loss terms are $\|z_{k+m} - K^m z_{k}\|$ and $\|x_{k+m} - \phi(K^m z_{k})\|$.
+This paper also proposed an auxiliary network to identify a continuously varying
+eigenvalue spectrum, which imposes constraints on the state transition matrix.
+With this auxiliary block, the network is able to characterize continuous eigenvalue spectrums
+such as sptially varying frequencies.
 
 \section{Results and Impact}
 
-This SINDY + autoencoder method successfully identified the following systems
+This deep learned approximation of Koopman Operator successfully identified the following systems
 \begin{enumerate}
-  \item Lorenze Attractor -- a simple but chaotic system
-  \item Reaction Diffusion -- a high-dimensional fluid dynamics governed by a spatial temporal PDE
-  \item Pendulumn In Video -- a high-dimensional dataset with low dimensional nonlinear dynamics
+  \item A simple system with discrete spectrum
+  \item A nonlinear pendulum with continuous spectrum
+  \item A high-dimensional nonlinear fluid flow model
 \end{enumerate}
 The major impact of this algorithm is the ability to automatically extract
-low-dimensiona latent coordinate space in a dynamics-aware fasion. It also leverages
-the sparse fitting aspect of SINDy, which provdied interpretable results trained from a neural
-network.
+relatively low-dimensional latent coordinate space that globally linearizes a system.
+The auxiliary module also helps produce parsimonious models with interpretable
+frequency modes.
 
 \section{Discussion}
 
-The drawback of this method (along with the original SINDy) is that it requires a dictionary
-of nonlinear terms prepared a head of time. For example, if we know the system contains
-polynomials up to some order, or sinusoidal nonlinearity, then we can construct a dictionary
-to include those terms. However, all possible nonlinearities are just too many to include them
-all. We can consider leverage the learning ability of the autoencoder to directly extract
-a dictionary function and perform sparse regression on top of that learned dictionary.
+This paper, along with the previous work in DMD, opened up many possibilities of applying
+linear theories to nonlinear dynamical systems. This method can be extended to incorporate
+external control inputs into the system, so that linear control theories with nice
+closed-form solutions may apply directly in that learned latent coordinate space.
 
 \newpage
 
