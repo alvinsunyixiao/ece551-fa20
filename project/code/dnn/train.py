@@ -34,7 +34,8 @@ class PendulumTrainer:
         self.val_dataset = data_pipe.get_numpy_dataset(self.val_data, train=False)
 
         self.lcindy = LCINDyTrain(self.train_dataset.element_spec['x'].shape[2],
-                                  self.train_dataset.element_spec['u'].shape[2], self.p.model)
+                                  self.train_dataset.element_spec['u'].shape[2],
+                                  self.p.model)
 
     def _parse_args(self):
         parser = argparse.ArgumentParser()
@@ -45,6 +46,8 @@ class PendulumTrainer:
         parser.add_argument("-l", "--log-dir", type=str, default="./logs",
                             help="directory for storing output logs and checkpoints")
         parser.add_argument("--tag", type=str, default=None, help="suffix for session dir name")
+        parser.add_argument("--continue", type=str, default=None,
+                            "specify the path to the model checkpoint to continue upon")
         return parser.parse_args()
 
     def _get_logdir(self):
@@ -58,6 +61,9 @@ class PendulumTrainer:
     def run(self):
         model = self.lcindy.build()
         model.compile(self.p.trainer.optimizer)
+
+        if self.args.continue is not None:
+            model.load_weights(self.args.continue)
 
         callbacks = [
             K.callbacks.TensorBoard(

@@ -162,6 +162,15 @@ class MultiLoss(KL.Layer):
 
         return total_loss
 
+def default_x_loss(x1_b3, x2_b3):
+    theta1_b = tf.atan2(x1_b3[:, 1], x1_b3[:, 0])
+    theta2_b = tf.atan2(x2_b3[:, 1], x2_b3[:, 0])
+
+    loss_theta_b = 1. - tf.cos(theta1_b - theta2_b)
+    loss_theta_dot_b = tf.square(x1_b3[:, 2] - x2_b3[:, 2])
+
+    return loss_theta_b + loss_theta_dot_b
+
 
 class LCINDyTrain:
 
@@ -171,7 +180,7 @@ class LCINDyTrain:
         num_hidden=256,
         num_layers=4,
         weight_decay=1e-4,
-        x_loss=K.losses.mse,
+        x_loss=default_x_loss,
         u_loss=K.losses.mse,
         z_loss=K.losses.mse,
     )
