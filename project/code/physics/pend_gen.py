@@ -16,12 +16,16 @@ def parse_args():
                         help="mass of the pendulum in [kg] (default to 0.01)")
     parser.add_argument("-d", "--damping", type=float, default=1e-4,
                         help="damping of the pendulum in [N M / (rad / s)] (default to 1e-4)")
-    parser.add_argument("--noise", type=float, default=6e-2,
-                        help="noise sigma to inject as input (default to 8e-2)")
+    parser.add_argument("--train-noise", type=float, default=6e-2,
+                        help="noise sigma to inject as train data input (default to 6e-2)")
     parser.add_argument("--train-sim-time", type=float, default=1000,
                         help="how long to simulate for training set in [s] (default to 1000)")
     parser.add_argument("--val-sim-time", type=float, default=30,
                         help="how long to simulate for validation set in [s] (default to 30)")
+    parser.add_argument("--val-sin-mag", type=float, default=8e-3,
+                        help="sinusoidal input magnitude for validation data (default to 8e-3)")
+    parser.add_argument("--val-sin-period", type=float, default=.4,
+                        help="sinusoidal input period for validation data in [s] (default to .4)")
     parser.add_argument("--dt", type=float, default=1e-3,
                         help="dt for integration in [s] (default to 1e-3)")
     parser.add_argument("--seed", type=int, default=42,
@@ -38,24 +42,25 @@ def generate_data(pendulum, args, validation=False):
         steps = int(args.train_sim_time / args.dt)
 
     # simulate pendulum
-    old_states = pendulum.get_states_array()
+    states = pendulum.get_states_array()
 
     ret = np.zeros((), dtype=[
-        ("curr_state", "<f4", (steps, old_states.shape[0])),
-        ("next_state", "<f4", (steps, old_states.shape[0])),
-        ("control", "<f4", (steps, 2)), # len([tau, dt]) == 2
+        ("state", "<f4", (steps, states.shape[0])),
+        ("control", "<f4", (steps, 1)), # tau is the only one input
     ])
     for i in trange(steps):
-        # white-noise input
-        tau = np.random.randn() * args.noise
+        if validation:
+            tau = np.sin(i * args.dt * 2 * np.pi / args.val_sin_period) * args.val_sin_mag
+        else:
+            tau = np.random.randn() * args.train_noise
+
+        # save current state and input
+        ret["state"][i] = states
+        ret["control"][i] = [tau]
+
+        # step through simulation
         pendulum.step({"tau": tau}, args.dt)
-        new_states = pendulum.get_states_array()
-
-        ret["curr_state"][i] = old_states
-        ret["next_state"][i] = new_states
-        ret["control"][i] = [tau, args.dt]
-
-        old_states = new_states
+        states = pendulum.get_states_array()
 
     return ret
 
