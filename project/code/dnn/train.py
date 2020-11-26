@@ -16,8 +16,12 @@ class PendulumDataPipeline(DynamicsDataPipeline):
         data_theta_x = np.cos(data_numpy["state"][:, 0])
         data_theta_y = np.sin(data_numpy["state"][:, 0])
         data_theta_dot = data_numpy["state"][:, 1]
+        #return self.get_dataset_from_dict({
+        #    "x": np.stack([data_theta_x, data_theta_y, data_theta_dot], axis=-1),
+        #    "u": data_numpy["control"],
+        #})
         return self.get_dataset_from_dict({
-            "x": np.stack([data_theta_x, data_theta_y, data_theta_dot], axis=-1),
+            "x": data_numpy["state"],
             "u": data_numpy["control"],
         })
 
@@ -45,8 +49,8 @@ class PendulumTrainer:
         parser.add_argument("-l", "--log-dir", type=str, default="./logs",
                             help="directory for storing output logs and checkpoints")
         parser.add_argument("--tag", type=str, default=None, help="suffix for session dir name")
-        parser.add_argument("--continue", type=str, default=None,
-                            "specify the path to the model checkpoint to continue upon")
+        parser.add_argument("--load", type=str, default=None,
+                            help="specify the path to the model checkpoint to continue upon")
         return parser.parse_args()
 
     def _get_logdir(self):
@@ -61,8 +65,8 @@ class PendulumTrainer:
         model = self.lcindy.build()
         model.compile(self.p.trainer.optimizer)
 
-        if self.args.continue is not None:
-            model.load_weights(self.args.continue)
+        if self.args.load is not None:
+            model.load_weights(self.args.load)
 
         callbacks = [
             K.callbacks.TensorBoard(

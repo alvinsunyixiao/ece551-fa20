@@ -6,10 +6,10 @@ class DynamicsDataPipeline:
 
     DEFAULT_PARAMS=o(
         # batch size for training
-        batch_size=4096,
+        batch_size=8000,
 
         # window for prediction horizon
-        window_size=16,
+        window_size=32,
         # shuffle buffer size
         shuffle_size=100000,
         # number of parallel calls for dataset.map
