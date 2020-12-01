@@ -46,6 +46,7 @@ def generate_data(pendulum, args, validation=False):
 
     ret = np.zeros((), dtype=[
         ("state", "<f4", (steps, states.shape[0])),
+        ("dstate", "<f4", (steps, states.shape[0])),
         ("control", "<f4", (steps, 1)), # tau is the only one input
     ])
     for i in trange(steps):
@@ -57,6 +58,8 @@ def generate_data(pendulum, args, validation=False):
         # save current state and input
         ret["state"][i] = states
         ret["control"][i] = [tau]
+        dstate_dict = pendulum.dynamics({"tau": tau})
+        ret["dstate"][i] = [dstate_dict["theta"], dstate_dict["theta_dot"]]
 
         # step through simulation
         pendulum.step({"tau": tau}, args.dt)

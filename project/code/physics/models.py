@@ -55,10 +55,6 @@ class Pendulum(PhysicalModel):
             "theta_dot": (-self.M*self.g*self.L*np.sin(theta) - self.B*theta_dot + inputs["tau"]) / self.J,
         }
 
-    def step(self, inputs, dt):
-        super(Pendulum, self).step(inputs, dt)
-        self._states["theta"] = self._states["theta"] % (2 * np.pi)
-
     def measure(self):
         return self._states["theta"]
 
