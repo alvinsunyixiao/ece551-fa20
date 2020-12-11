@@ -23,16 +23,16 @@ if __name__ == "__main__":
     def animate_func(i):
         idx = i * args.interval;
         rotor.set_states(x=data["state"][idx, 0],
-                         y=data["state"][idx, 1],
-                         theta=data["state"][idx, 2],
-                         x_dot=data["state"][idx, 3],
-                         y_dot=data["state"][idx, 4],
+                         x_dot=data["state"][idx, 1],
+                         y=data["state"][idx, 2],
+                         y_dot=data["state"][idx, 3],
+                         theta=data["state"][idx, 4],
                          theta_dot=data["state"][idx, 5])
         return rotor.draw()
 
     rotor.init_draw()
-    rotor.ax.set_xlim(-10, 10)
-    rotor.ax.set_ylim(-10, 10)
+    rotor.ax.set_xlim(-6, 6)
+    rotor.ax.set_ylim(-6, 6)
     anim = FuncAnimation(rotor.fig, func=animate_func, interval=args.interval * args.dt * 1e3,
                          blit=True, frames=int(data["state"].shape[0] / args.interval))
     plt.show()

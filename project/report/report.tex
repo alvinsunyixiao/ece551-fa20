@@ -4,8 +4,12 @@
 \usepackage{amssymb}
 \usepackage{amsthm}
 \usepackage{appendix}
+\usepackage{booktabs}
 \usepackage{bm}
 \usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{pifont}
+\usepackage{subcaption}
 \usepackage{xcolor}
 
 \usepackage[hmargin=.75in, vmargin=1in]{geometry}
@@ -15,6 +19,9 @@
 \DeclareMathOperator*{\argmin}{argmin}
 \DeclareMathOperator*{\minimize}{minimize}
 \DeclareMathOperator*{\subto}{subject\,to}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
 
 \begin{document}
 
@@ -199,7 +206,7 @@ system identification with optimal control. Each of them has a nonlinear governi
     \end{gather}
 
   \item Planar Rotor
-    \begin{gather}
+    \begin{gather}\label{eqa:rotor}
       \left\{\begin{aligned}
         m\ddot{x} &= -(u_l + u_r) \sin{\theta} \\
         m\ddot{y} &= (u_l + u_r) \cos{\theta} - mg \\
@@ -326,7 +333,7 @@ will result in a dense coefficient matrix $A$. To solve for this problem, we fol
 the Sequential Thresholded Least Square algorithm as mentioned in SINDy \cite{sindy}.
 Instead, we solve for a ridge linear regression, which penalizes the magnitude of the coefficients
 with their $\mathcal{L}_2$ norm.
-\begin{gather}
+\begin{gather}\label{eqa:ridge_regression}
   \begin{aligned}
     A &= \argmin_A \| \bm{\theta}(\bm{x}, \bm{u})A - \dot{\bm{x}} \|^2 + \lambda \| A \|^2 \\
       &= (\bm{\theta}^T \bm{\theta} + \lambda I)^{-1}\bm{\theta}^T \dot{\bm{x}}
@@ -337,7 +344,7 @@ ridge linear regression on a subsets of dimensions, until the number of nonzero 
 converges. This will help obtain a parsimonious model that not only accurately estimates the
 dynamics, but also correctly recovers the underlying structure of the governing equation.
 
-\subsection{Finite Horizon MPC}
+\subsection{Finite Horizon MPC}\label{sec:mpc}
 
 This project uses the direct transcription method, which explicitly formulate the finite horizon
 MPC as a constrained optimization problem. Consider the following discrete dynamics,
@@ -398,7 +405,6 @@ the control performance on those systems with the identified model with the SIND
 
 \subsection{System ID with Koopman}
 
-
 An experiment is conducted to learn a single pendulum dynamics using the method proposed
 in Section~\ref{sec:deep_koopman}. The neural network is constructed with 2 hidden layers
 for both encoders and decoders, where there are 80 hidden neurons at each layers. The
@@ -417,12 +423,150 @@ to perform any nonlinear control behaviors.
 
 \subsection{System ID with SINDYc}
 
+\begin{table*}[htb!]
+  \centering
+
+  \begin{tabular}{@{}llclclc@{}}
+    \toprule
+    \multirow{3.5}{*}{\shortstack{Noise \\ Level}} &
+      \multicolumn{2}{c}{Pendulum} &
+      \multicolumn{2}{c}{Lorenz Attractor} &
+      \multicolumn{2}{c}{Planar Rotor} \\
+    \cmidrule(l{3pt}r{3pt}){2-3} \cmidrule(l{3pt}r{3pt}){4-5} \cmidrule(l{3pt}r{3pt}){6-7}
+    {} & Validation & Structure & Validation & Structure & Validation & Structure \\
+    {} & MSE & Recovered & MSE & Recovered & MSE & Recovered \\
+
+    \midrule
+
+    1e-3 & 2.42e-7 & \cmark & 8.34e-7 & \cmark & 2.32e-6 & \cmark \\
+    5e-3 & 4.80e-6 & \cmark & 3.44e-6 & \cmark & 3.09e-6 & \cmark \\
+    1e-2 & 2.26e-4 & \cmark & 7.03e-5 & \cmark & 4.03e-6 & \cmark \\
+    5e-2 & 5.33e-3 & \xmark & 3.28e-4 & \cmark & 1.44e-5 & \cmark \\
+    1e-1 & -       & -      & 2.23e-3 & \cmark & 1.41e-3 & \xmark \\
+
+    \bottomrule
+  \end{tabular}
+
+  \caption{SINDYc Performance}
+  \label{tbl:sindyc}
+\end{table*}
+
 Using the SINDYc framework with Sequential Thresholded Least Square solver, I am able to obtain
-very accurate model despite the presence of noise in the training data.
+very accurate model despite the presence of noise in the training data. Table~\ref{tbl:sindyc}
+shows the system identification performance on all of three systems:
+\begin{itemize}
+  \item The noise standard deviation is represented with the multiple of the
+    standard deviation of the original dataset variation.
+  \item Validation MSE calculates a metric on how good the estimated model behave
+    on validation dataset.
+  \item The algorithm is said to successfully recover the structure of the dynamics if
+    it identifies the correct nonzero terms in the sparse matrix.
+\end{itemize}
+Hyperparameter settings for each of the systems are attached in the
+Appendix Section~\ref{sec:hyper_sindy}.
 
 \subsection{MPC with SINDYc}
 
+With the identified systems, now we can control those plants with the nonlinear MPC as
+described in Section~\ref{sec:mpc}. For each of systems, I used the regression model coming
+from the dataset generated with noise level 1e-2. This way, we get a descent amount of
+noise while ensuring correct model structure recovery. Animated results are contained
+in the notebooks from the source code.
+
+\subsubsection{Pendulum}
+
+The ground truth model parameters in Equation~\ref{eqa:pendulum}
+are specified in Table~\ref{tbl:pendulum_params}.
+\begin{table}[h]
+  \centering
+  \begin{tabular}{cccc}
+    \toprule
+    $m$ [kg] & $l$ [m] & $b$ [N$\cdot$m / (rad/s)] & $I$ [kg$\cdot$m$^2$] \\
+    \midrule
+    1 & 2/5 & 1/10 & 4/25 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Pendulum Model Parameters}
+  \label{tbl:pendulum_params}
+\end{table}
+An absolute torque saturation of 1.2 N$\cdot$m is also applied to the MPC constraints.
+Figure~\ref{fig:mpc_pendulum} shows that under such extreme saturation, the optimization
+is capable of coming up with swing up / down controller to perform accurate reference tracking.
+
+\subsubsection{Lorenz Attractor}
+
+The ground truth model parameters in Equation~\ref{eqa:lorenz} are specified in
+Table~\ref{tbl:lorenz_params}.
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ccc}
+    \toprule
+    $\sigma$ & $\rho$ & $\beta$ \\
+    \midrule
+    10 & 28 & 8/3 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Lorenz Attractor Parameters}
+  \label{tbl:lorenz_params}
+\end{table}
+This system is particularly more difficult for both identification and control. A slightest
+bit of error will cause the prediction to diverge exponentially due to its chaotic nature.
+More interestingly, this system is underactuated. It has 3 degrees of freedom while having
+only one actuator. Nevertheless, Figure~\ref{fig:mpc_lorenz} demonstrated that the system
+is still capable of performing good reference trakcing in such challenging chaotic scenario.
+
+\subsubsection{Planar Rotor}
+
+The ground truth model parameters in Equation~\ref{eqa:rotor} are specified in
+Table~\ref{tbl:rotor_params}.
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ccc}
+    \toprule
+    $m$ [kg] & $l$ [m] & $I$ [kg$\cdot$m$^2$] \\
+    \midrule
+    2 & 1/2 & 1/24 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Planar Rotor Parameters}
+  \label{tbl:rotor_params}
+\end{table}
+This experiment specified the rotor to fly between two waypoints while performing a
+flip for each waypoint transition. With an accurately identified model, the nonlinear MPC
+algorithm is able to explore the highly nonlinear state space to perform such maneuver.
+Figure~\ref{fig:mpc_rotor} shows both the rotation tracking and position tracking of the rotor,
+and we can see the flip behavior is done by accurately tracking the rotation reference.
+
 \section{Discussion}
+
+For the failure of learning a good linear embedding for a nonlinear pendulum system, there
+are several explanations that could back up this experiental results. By Koopman Theory, it is
+known that not all systems can be trasformed into a finite dimensional Koopman Invariant subspace.
+On the Control Theory side, we also know that linear systems only have one fixed point at
+the origin, so it cannot really represent any systems with multiple fixed points. Even though
+the single pendulum is one of the simplest nonlinear systems, its phase plane exhibits an
+orbital behavior with infinite numbers of fixed points. Both of these theories explain why it
+is very hard to obtain a finite dimensional approximation of that infinite dimensional space
+where the Koopman Operator lives in. There is, I believe, another direction to pursue.
+We can relate more closely to the general forms of Koopman Analysis with Control given by
+\cite{generalkoopman}. Instead of seperately learning the embeddings for states and control
+inputs, we can jointly perform the estimation. However, this will also requires additional
+thoughts to be connected to linear control theories as it changes the formulations.\\
+
+On the other side, this project successfully demonstrated
+the capabilities of combining SINDYc system identification method with nonlinear
+Model Predictive Control. It is really fascinating to see how we could create intelligent control
+behaviors on highly nonlinear systems with unknown dynamics. A future direction is to make
+the system identification run online in an adaptive fashion. This could also potentially deal
+with time varying dynamics in the system. Another interesting direction is to come up
+with control strategies that provide more information to the estimation process when
+we don't have a reliable model. This can potentially reduce the amount of data needed to
+identify an accurate and parsimonious model. One challenge of the SINDYc method is that
+it does not perform well with implicit dynamics such as double pendulums or acrobots.
+Equivalently, those implicit dynamics introduces many fractional nonlinearities that
+are really hard to model as nonlinear libraries. Some work, such as \cite{implicitsindy},
+has been done to tackle this difficulty, but it remains a big challenge for SINDy based
+nonlinear identification methods.
 
 % citations
 \newpage
@@ -434,7 +578,42 @@ very accurate model despite the presence of noise in the training data.
 \onecolumn
 \appendix
 \appendixpage
+
 \section{Source Code}
+
+\section{SINDYc Settings}\label{sec:hyper_sindy}
+
+All hyperparameters for applying the SINDYc algorithm are included
+in the \texttt{<model>\_params.py} files in the source code. Table~\ref{tbl:sindyc_params}
+shows a summary of those parameters. $\lambda$ is the $\mathcal{L}_2$ regularization
+defined in Equation~\ref{eqa:ridge_regression}. The thresholds are used in the
+Sequential Thresholded Least Square algorithm to drop out small coefficients at the end of
+each iteration.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{llcc}
+    \toprule
+    Model & Nonlinear Library & $\lambda$ & Threshold \\
+    \midrule
+
+    \multirow{2}{*}{Pendulum} & Identity & \multirow{2}{*}{8} & \multirow{2}{*}{0.1} \\
+    {} & Sinusoids \\
+    \cmidrule{2-4}
+
+    Lorenz Attractor & Polynomial (deg. 2) & 1 & 0.1 \\
+    \cmidrule{2-4}
+
+    \multirow{4}{*}{Planar Rotor} & Identity & \multirow{4}{*}{20} & \multirow{4}{*}{0.1} \\
+    {} & Sinusoids \\
+    {} & Multiplication \\
+    {} & Constant \\
+    \bottomrule
+  \end{tabular}
+  \caption{SINDYc Hyperparameters}
+  \label{tbl:sindyc_params}
+\end{table}
+
 \section{Figures}
 
 \begin{figure}[htb!]
@@ -456,6 +635,27 @@ very accurate model despite the presence of noise in the training data.
   \includegraphics[width=\textwidth]{koopman_correct}
   \caption{Identified Pendulum with Koopman Space Prediction (with periodic correction)}
   \label{fig:koopman_correct}
+\end{figure}
+
+\begin{figure}[htb!]
+  \centering
+  \includegraphics[width=\textwidth]{mpc_pendulum}
+  \caption{SINDYc with MPC -- Pendulum Control}
+  \label{fig:mpc_pendulum}
+\end{figure}
+
+\begin{figure}[htb!]
+  \centering
+  \includegraphics[width=\textwidth]{mpc_lorenz}
+  \caption{SINDYc with MPC -- Lorenz Attractor Control}
+  \label{fig:mpc_lorenz}
+\end{figure}
+
+\begin{figure}[htb!]
+  \centering
+  \includegraphics[width=\textwidth]{mpc_rotor}
+  \caption{SINDYc with MPC -- Planar Rotor Control}
+  \label{fig:mpc_rotor}
 \end{figure}
 
 \end{document}

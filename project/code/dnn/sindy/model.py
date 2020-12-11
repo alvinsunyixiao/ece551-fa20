@@ -112,101 +112,74 @@ class MultiplyLibrary(BaseLibrary):
 
         return tf.reshape(code1 * code2, (-1, c1 * c2))
 
-class SparseLinearMap(KL.Layer):
-    def __init__(self, num_states: int, l1: float, **kwargs: T.Any) -> None:
-        super(SparseLinearMap, self).__init__(**kwargs)
-        self.num_states = num_states
-        self.l1 = l1
+class SINDYc(KL.Layer):
+    def __init__(self,
+        library: BaseLibrary,
+        **kwargs: T.Any
+    ) -> None:
+        super(SINDYc, self).__init__(**kwargs)
+        self.library = library
 
-    def build(self, shape: tf.TensorShape) -> None:
+    def build(self, shapes: T.Tuple[tf.TensorShape, tf.TensorShape]) -> None:
+        num_states = shapes[0][-1]
+        num_controls = shapes[1][-1]
+        num_features = self.library.compute_output_shape((None, num_states + num_controls))[-1]
+
         self.W = self.add_weight(
             name="W",
-            shape=(shape[-1], self.num_states),
-            initializer=K.initializers.random_normal(stddev=1e-6),
+            shape=(num_features, num_states),
             trainable=self.trainable,
         )
         self.mask = self.add_weight(
             name="mask",
-            shape=(shape[-1], self.num_states),
+            shape=(num_features, num_states),
             initializer="ones",
             trainable=False,
         )
-        # l1 sparsity penalty
-        self.add_loss(lambda: self.l1 * tf.reduce_sum(tf.abs(self.W * self.mask)))
-
-    def update_mask(self, threshold: float) -> None:
-        self.mask.assign(tf.cast(tf.abs(self.W) >= threshold, tf.float32))
-
-    def call(self, x: tf.Tensor) -> tf.Tensor:
-        self.add_metric(tf.reduce_sum(tf.abs(self.W * self.mask)), "L1 Loss")
-        W = self.W * self.mask
-        return tf.matmul(x, W)
-
-class SINDYc(KL.Layer):
-    def __init__(self,
-        num_states: int,
-        library: BaseLibrary,
-        l1: float,
-        **kwargs: T.Any
-    ) -> None:
-        super(SINDYc, self).__init__(**kwargs)
-        self.num_states = num_states
-        self.library = library
-        self.dynamics = SparseLinearMap(num_states, l1, trainable=self.trainable)
 
     def call(self, inputs: T.Tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
         x_and_u = tf.concat(inputs, axis=-1)
 
         code_bc = self.library(x_and_u)
-        dx_bx = self.dynamics(code_bc)
 
-        return dx_bx
+        return tf.matmul(code_bc, self.W * self.mask)
 
-
-class DynamicLoss(KL.Layer):
-    def __init__(self,
-        loss: T.Callable[[tf.Tensor, tf.Tensor], tf.Tensor] = K.losses.mse,
-        **kwargs: T.Any,
-    ):
-        super(DynamicLoss, self).__init__(**kwargs)
-        self.loss = loss
-
-    def call(self, inputs: T.Tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
-        x1_bx, x2_bx = inputs
-
-        loss = self.loss(x1_bx, x2_bx)
-        self.add_loss(tf.reduce_mean(loss))
-        self.add_metric(loss, name="Prediction Loss")
-
-        return loss
-
-class SINDYcTrain:
-
-    DEFAULT_PARAMS=o(
-        library=PolynomialLibrary(2),
-        l1=1e-7,
-        loss=K.losses.mse,
-    )
-
-    def __init__(self, num_states: int, num_controls: int, params: o = DEFAULT_PARAMS) -> None:
+class SINDYcModel:
+    def __init__(self, num_states: int, num_controls: int, library: BaseLibrary):
+        self.sindy = SINDYc(library)
         self.num_states = num_states
         self.num_controls = num_controls
-        self.p = params
-        self.sindy = SINDYc(
-            num_states=num_states,
-            library=self.p.library,
-            l1=self.p.l1,
-        )
-        self.dynamic_loss = DynamicLoss(loss=self.p.loss)
+        self.model = self._build_model()
 
-    def build(self) -> K.Model:
-        x = KL.Input((self.num_states,), name="state")
-        x_dot = KL.Input((self.num_states,), name="dstate")
-        u = KL.Input((self.num_controls,), name="control")
+    def save_weights(self, fpath):
+        self.model.save_weights(fpath)
 
-        x_dot_hat = self.sindy((x, u))
-        loss = self.dynamic_loss((x_dot_hat, x_dot))
+    def load_weights(self, fpath):
+        self.model.load_weights(fpath)
 
-        return K.Model(inputs=[x, x_dot, u],
-                       outputs=loss)
+    @property
+    def W(self):
+        return self.sindy.W.numpy()
+
+    @W.setter
+    def W(self, value):
+        self.sindy.W.assign(value)
+
+    @property
+    def mask(self):
+        return self.sindy.mask.numpy()
+
+    @mask.setter
+    def mask(self, value):
+        self.sindy.mask.assign(value)
+
+    def __call__(self, inputs):
+        return self.sindy(inputs)
+
+    def _build_model(self) -> K.Model:
+        x = KL.Input(shape=(self.num_states,))
+        u = KL.Input(shape=(self.num_controls,))
+        dx = self.sindy((x, u))
+
+        return K.Model(inputs=[x, u], outputs=[dx])
 
