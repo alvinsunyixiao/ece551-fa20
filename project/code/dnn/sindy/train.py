@@ -6,18 +6,9 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras as K
 
-from dnn.sindy.data import DataPipeline
 from dnn.utils.mem import set_memory_growth
 from dnn.utils.params import ParamDict
 from dnn.sindy.model import SINDYcTrain, SINDYc
-
-class PendulumDataPipeline(DataPipeline):
-    def get_numpy_dataset(self, data_numpy, train=True):
-        return self.get_dataset_from_dict({
-            "x": data_numpy["state"],
-            "x_dot": data_numpy["dstate"],
-            "u": data_numpy["control"],
-        })
 
 class MaskUpdateCallback(K.callbacks.Callback):
     def __init__(self, sindy: SINDYc, threshold: float):
@@ -30,7 +21,7 @@ class MaskUpdateCallback(K.callbacks.Callback):
         tf.print(self.sindy.dynamics.mask, summarize=-1)
 
     def on_epoch_end(self, epoch, logs=None):
-        if epoch >= 10 and epoch % 5 == 0:
+        if epoch >= 20 and epoch % 5 == 0:
             self.sindy.dynamics.update_mask(self.threshold)
 
 class PendulumTrainer:
@@ -39,15 +30,14 @@ class PendulumTrainer:
         self.p = ParamDict.from_file(self.args.params)
         self.log_dir = self._get_logdir()
 
-        data_pipe = PendulumDataPipeline(self.p.data)
-        self.train_data = np.load(os.path.join(self.args.data_dir, "train.npy"))
-        self.val_data = np.load(os.path.join(self.args.data_dir, "val.npy"))
-        self.train_dataset = data_pipe.get_numpy_dataset(self.train_data, train=True)
-        self.val_dataset = data_pipe.get_numpy_dataset(self.val_data, train=False)
+        train_data = np.load(os.path.join(self.args.data_dir, "train.npy"))
+        val_data = np.load(os.path.join(self.args.data_dir, "val.npy"))
+        self.train_dataset = {name: train_data[name] for name in train_data.dtype.names}
+        self.val_dataset = {name: val_data[name] for name in val_data.dtype.names}
 
         self.sindy_train = SINDYcTrain(
-            num_states=self.train_dataset.element_spec['x'].shape[1],
-            num_controls=self.train_dataset.element_spec['u'].shape[1],
+            num_states=self.train_dataset["state"].shape[1],
+            num_controls=self.train_dataset["control"].shape[1],
             params=self.p.model
         )
 
@@ -96,6 +86,7 @@ class PendulumTrainer:
             x=self.train_dataset,
             validation_data=self.val_dataset,
             epochs=self.p.trainer.num_epochs,
+            batch_size=self.p.trainer.batch_size,
             callbacks=callbacks,
         )
 

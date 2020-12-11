@@ -6,16 +6,15 @@ from dnn.koopman.data import DynamicsDataPipeline
 from dnn.utils.params import ParamDict as o
 
 def default_lr_scheduler(epoch, lr):
-    return 1e-3
-    if epoch < 250:
-        return 1e-5
-    elif epoch < 450:
-        return 1e-5
+    if epoch < 15000:
+        return 1e-3
+    elif epoch < 25000:
+        return 1e-4
     else:
         return 1e-5
 
 trainer=o(
-    num_epochs=1500,
+    num_epochs=30000,
     log_freq=50,
     optimizer=K.optimizers.Adam(amsgrad=True),
     lr_scheduler=default_lr_scheduler,

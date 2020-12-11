@@ -5,31 +5,30 @@ import tensorflow.keras.layers as KL
 
 from dnn.utils.params import ParamDict as o
 
-class NonlinearLibrary(KL.Layer):
-    def __init__(self,
-        num_states: int,
-        order: int,
-        sinusoid: bool,
-        exponential: bool,
-        absolute: bool,
-        **kwargs: T.Any,
-    ):
-        super(NonlinearLibrary, self).__init__(**kwargs)
-        self.num_states = num_states
-        self.order = order
-        self.sinusoid = sinusoid
-        self.exponential = exponential
-        self.absolute = absolute
+class BaseLibrary(KL.Layer):
+    def build(self, input_shape: tf.TensorShape) -> None:
+        self.num_states = input_shape[-1]
 
-    def get_polynomial(self, degree: int, x_ac: tf.Tensor) -> tf.Tensor:
-        if degree == 1:
-            return x_ac
-        return x_ac
+class IdentityLibrary(BaseLibrary):
+    def __init__(self, **kwargs: T.Any):
+        super(IdentityLibrary, self).__init__(**kwargs)
 
     def call(self, x_ac: tf.Tensor) -> tf.Tensor:
-        features = []
+        return x_ac
 
-        # build polynomials
+class ConstantLibrary(BaseLibrary):
+    def __init__(self, **kwargs: T.Any):
+        super(ConstantLibrary, self).__init__(**kwargs)
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        return tf.ones_like(x_ac[..., 0])[..., tf.newaxis]
+
+class PolynomialLibrary(BaseLibrary):
+    def __init__(self, order: int, **kwargs: T.Any):
+        super(PolynomialLibrary, self).__init__(**kwargs)
+        self.order = order
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
         x_a_arr = tf.TensorArray(tf.float32, size=self.order,)
         x_a_arr = [[x_a[..., None] for x_a in tf.unstack(x_ac, axis=-1)]]
         for order in range(1, self.order + 1):
@@ -41,21 +40,77 @@ class NonlinearLibrary(KL.Layer):
             for i in range(self.num_states - 2, -1, -1):
                 x_a_arr[order - 1][i] = tf.concat([x_a_arr[order - 1][i],
                                                    x_a_arr[order - 1][i + 1]], axis=-1)
-        features.append(tf.concat([x_a[0] for x_a in x_a_arr], axis=-1))
 
-        # build sinusoids
-        if self.sinusoid:
-            features.extend([tf.cos(x_ac), tf.sin(x_ac)])
+        return tf.concat([x_a[0] for x_a in x_a_arr], axis=-1)
 
-        # build exponential
-        if self.exponential:
-            features.append(tf.exp(x_ac))
+class SinusoidLibrary(BaseLibrary):
+    def __init__(self, index: T.Optional[int] = None, **kwargs: T.Any):
+        super(SinusoidLibrary, self).__init__(**kwargs)
+        self.index = index
 
-        # build abs
-        if self.absolute:
-            features.append(tf.abs(x_ac))
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        if self.index is None:
+            return tf.concat([tf.cos(x_ac), tf.sin(x_ac)], axis=-1)
+        else:
+            x_a = x_ac[..., self.index]
+            return tf.stack([tf.cos(x_a), tf.sin(x_a)], axis=-1)
 
-        return tf.concat(features, axis=-1)
+class ComposedLibrary(BaseLibrary):
+    def __init__(self, libraries: T.Sequence[BaseLibrary], **kwargs: T.Any):
+        super(ComposedLibrary, self).__init__(**kwargs)
+        self.libraries = libraries
+        for library in libraries:
+            self.tmp = library  # sub layer registration
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        for library in self.libraries:
+            x_ac = library(x_ac)
+        return x_ac
+
+class CollectionLibrary(BaseLibrary):
+    def __init__(self, libraries: T.Sequence[BaseLibrary], **kwargs: T.Any):
+        super(CollectionLibrary, self).__init__(**kwargs)
+        self.libraries = libraries
+        for library in libraries:
+            self.tmp = library  # sub layer registration
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        ret = []
+        for library in self.libraries:
+            ret.append(library(x_ac))
+
+        return tf.concat(ret, axis=-1)
+
+class DivisionLibrary(BaseLibrary):
+    def __init__(self, lib1: BaseLibrary, lib2: BaseLibrary, **kwargs: T.Any):
+        super(DivisionLibrary, self).__init__(**kwargs)
+        self.lib1 = lib1
+        self.lib2 = lib2
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        code1 = tf.expand_dims(self.lib1(x_ac), axis=-1)
+        code2 = tf.expand_dims(self.lib2(x_ac), axis=-2)
+
+        c1 = tf.shape(code1)[-2]
+        c2 = tf.shape(code2)[-1]
+        output_shp = tf.concat([tf.shape(x_ac)[:-1], [c1 * c2]], axis=0)
+
+        return tf.reshape(tf.math.divide_no_nan(code1, code2), output_shp)
+
+class MultiplyLibrary(BaseLibrary):
+    def __init__(self, lib1: BaseLibrary, lib2: BaseLibrary, **kwargs: T.Any):
+        super(MultiplyLibrary, self).__init__(**kwargs)
+        self.lib1 = lib1
+        self.lib2 = lib2
+
+    def call(self, x_ac: tf.Tensor) -> tf.Tensor:
+        code1 = tf.expand_dims(self.lib1(x_ac), axis=-1)
+        code2 = tf.expand_dims(self.lib2(x_ac), axis=-2)
+
+        c1 = code1.shape[-2]
+        c2 = code2.shape[-1]
+
+        return tf.reshape(code1 * code2, (-1, c1 * c2))
 
 class SparseLinearMap(KL.Layer):
     def __init__(self, num_states: int, l1: float, **kwargs: T.Any) -> None:
@@ -67,6 +122,7 @@ class SparseLinearMap(KL.Layer):
         self.W = self.add_weight(
             name="W",
             shape=(shape[-1], self.num_states),
+            initializer=K.initializers.random_normal(stddev=1e-6),
             trainable=self.trainable,
         )
         self.mask = self.add_weight(
@@ -89,18 +145,23 @@ class SparseLinearMap(KL.Layer):
 class SINDYc(KL.Layer):
     def __init__(self,
         num_states: int,
-        num_controls: int,
+        library: BaseLibrary,
         l1: float,
         **kwargs: T.Any
     ) -> None:
         super(SINDYc, self).__init__(**kwargs)
-        self.library = NonlinearLibrary(num_states + num_controls, 1, True, False, False)
+        self.num_states = num_states
+        self.library = library
         self.dynamics = SparseLinearMap(num_states, l1, trainable=self.trainable)
 
     def call(self, inputs: T.Tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
         x_and_u = tf.concat(inputs, axis=-1)
-        code = self.library(x_and_u)
-        return self.dynamics(code)
+
+        code_bc = self.library(x_and_u)
+        dx_bx = self.dynamics(code_bc)
+
+        return dx_bx
+
 
 class DynamicLoss(KL.Layer):
     def __init__(self,
@@ -122,6 +183,7 @@ class DynamicLoss(KL.Layer):
 class SINDYcTrain:
 
     DEFAULT_PARAMS=o(
+        library=PolynomialLibrary(2),
         l1=1e-7,
         loss=K.losses.mse,
     )
@@ -132,15 +194,15 @@ class SINDYcTrain:
         self.p = params
         self.sindy = SINDYc(
             num_states=num_states,
-            num_controls=num_controls,
+            library=self.p.library,
             l1=self.p.l1,
         )
         self.dynamic_loss = DynamicLoss(loss=self.p.loss)
 
     def build(self) -> K.Model:
-        x = KL.Input((self.num_states,), name="x")
-        x_dot = KL.Input((self.num_states,), name="x_dot")
-        u = KL.Input((self.num_controls,), name="u")
+        x = KL.Input((self.num_states,), name="state")
+        x_dot = KL.Input((self.num_states,), name="dstate")
+        u = KL.Input((self.num_controls,), name="control")
 
         x_dot_hat = self.sindy((x, u))
         loss = self.dynamic_loss((x_dot_hat, x_dot))
