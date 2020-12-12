@@ -46,7 +46,7 @@
 \end{titlepage}
 
 \begin{abstract}
-  Optimal control, especially for nonlinear systems, has became one of the most powerful
+  Optimal control, especially for nonlinear systems, has become one of the most powerful
   modern control techniques that produces intelligent behaviors. Most of the optimal control
   methods require a-priori knowledge of the system, namely, its governing dynamical equations.
   However, in reality, many of the physical systems has unknown or even time-varying dynamics.
@@ -82,7 +82,7 @@ where $u$ is a vector for the controlled actuation. Consider the case where the
 states are directly observable from the plants, namely, we can obtain both $\dot{x}$
 and $x$ from sensor readings, the problem of identifying the system becomes
 estimating this nonlinear vector function $f$. For the case where the states
-and derivatives are partially observable, we can build a seperate observers and filters dedicated
+and derivatives are partially observable, we can build seperate observers and filters dedicated
 to estimating the missing variables. For the scope of this project, we assume that everything is
 directly obtainable from the plants.
 
@@ -107,15 +107,14 @@ state tracking on a finite number of state sequences, $\{x_k\}_{k \in \mathcal{K
 \section{Background}
 
 Nonlinear system identification has become a rapidly growing field in the recent years due to
-high quality sensors and high performance digital computing
-devices becoming more readily available.
+high quality sensors and high performance digital computing devices becoming more accessible.
 There are several popular approaches, some of which are starting to be applied in a
 variety of applications.
 This project has explored two of the popular methods, Koopman Analysis and Sparse
 Identification of Nonlinear Dynamics.
 
 \subsection{Koopman Theory}
-Koopman Theory is originally proposed in the early 20 century. It stated that any nonlinear
+Koopman Theory is originally proposed in the early 20th century. It stated that any nonlinear
 system can be transformed into an infinite dimensional space where the dynamics become
 linear. Formally,
 \begin{gather}\label{eqa:koopman}
@@ -138,7 +137,8 @@ for generalizing Koopman Theory to systems with control inputs with
 which also drew a strong connection to DMDc \cite{dmdc}, which incorporates
 control inputs with the
 DMD method. The major attraction on Koopman related approaches centers around the ability
-to linearize a nonlinear system in a global sense. Many of those work focuses on the estimation
+to linearize a nonlinear system in a global sense. A large portion of those work
+focuses on the estimation
 aspects of identifying an unknown nonlinear plant, but the connection between classical
 linear control theories and Koopman analysis has yet to be explored.
 
@@ -222,7 +222,7 @@ Using the ground truth model, I can obtain a time series of state evolutions for
 each of the chosen systems by applying some white noise control intputs. Since
 this project focuses on the effectiveness of the overall system for controlling
 nonlinear plants with unknown dynamics, we assume all the states as well as derivatives
-are directly observable. To make the simulation more realistic, various level of white noises
+are directly observable. To make the simulation more realistic, various levels of white noises
 are added to the observations. The generated synthetic data is then passed down to
 the system identification algorithms.
 
@@ -239,8 +239,8 @@ both SINDy and Koopman based methods regardless of their success or failure.
 
 The original Deep Koopman method \cite{deepkoopman} learns the $g$ function in
 Equation~\ref{eqa:koopman}, for dynamical systems without external control inputs.
-I extended their ideas to incorporate control variables as well as for continuous cases.
-Generally, we would like learn some nonlinear transformations
+I extended their ideas to incorporate control variables and also to adapt to continuous cases.
+Generally, we would like to learn some nonlinear transformations
 \begin{gather}
   z = \varphi_z(x, u) \\
   v = \varphi_v(x, u)
@@ -291,13 +291,13 @@ for training the network.
     \end{gather}
 \end{enumerate}
 The final loss is a weighted summation of the three terms. We can then jointly train the
-weights of the neural network and the lineary dynamics matrices $A$ and $B$.
+weights of the neural network and the linear dynamics matrices $A$ and $B$.
 
 \subsubsection{SINDy with Control \cite{sindyc}}
-Unlike Koopman baesd methods, SINDy is an algorithm that explicitly reconstruct the
+Unlike Koopman baesd methods, SINDy is an algorithm that explicitly reconstructs the
 structure of the dyanmics. In order to obtain the structure of Equation~\ref{eqa:fxu}
 for arbitrary sytsem,
-SINDYc method assumes the governing equation to be in the form of a summation of
+SINDYc method assumes the governing equation to be the form of a summation of
 multiple nonlinear terms. For example, the Lorenz Attractor as modeled by
 Equation~\ref{eqa:lorenz} can be rewritten in the form of Equation~\ref{eqa:sindyc}.
 \begin{gather}\label{eqa:lorenz_sindy}
@@ -335,7 +335,7 @@ linear regression problem.
   \end{aligned}
 \end{gather}
 However, in reality, the measured data is noisy, and doing the direct linear regression
-will result in a dense coefficient matrix $A$. To solve for this problem, we follow
+will result in a dense coefficient matrix $A$. To solve this problem, we follow
 the Sequential Thresholded Least Square algorithm as mentioned in SINDy \cite{sindy}.
 Instead of directly performing the linear regression, we solve for a ridge linear regression,
 which penalizes the magnitude of the coefficients with an $\mathcal{L}_2$ norm.
@@ -373,8 +373,8 @@ by applying quadratic costs for both control inputs and states
 where $Q$ and $R$ are some positive semi-definite matrices.
 To decouple the effects between different
 states and inputs, the matrices can be further simplified to be diagonal. The diagonal entires
-then can be interpreted as a trade off on how much we want to regulate each state and each
-inputs. The MPC controller can then be formulated as jointly optimizing for the states and
+then can be interpreted as a tradeoff on how much we want to regulate each state and each
+inputs. The MPC controller can then be formulated as joint optimization of the states and
 control inputs subject to the dynamics constraints. Namely,
 \begin{gather}
   \begin{aligned}
@@ -395,9 +395,9 @@ we can write the dynamics in a discrete fashion.
 \begin{gather}
   x_{k+1} \approx x_k + f(x_k, u_k) \Delta t = F(x_k, u_k)
 \end{gather}
-However, in order to make Euler integration accurate, the time step often time needs to be
+However, in order to make Euler integration accurate, the time step often needs to be
 on the order of $10^{-3}$ second. On the other hand, the finite prediction horizon is
-usually around 5 seconds.
+usually around 5 seconds depending on the speed of the dynamics.
 This introduces way too many variables for the optimization problem. This issue can be
 mitigated by reusing the same control inputs to perform multiple integration steps. For example
 we can keep a integration step of $10^{-3}$ second, but performing a dynamical prediction
@@ -416,11 +416,11 @@ the control performance on those systems with the identified model.
 
 An experiment is conducted to learn a single pendulum dynamics using the method proposed
 in Section~\ref{sec:deep_koopman}. The neural network is constructed with 2 hidden layers
-for both encoders and decoders, where there are 80 hidden neurons at each layers. The
+for both encoders and decoders, where there are 80 hidden neurons in each layer. The
 latent space for the states and control inputs has 16 and 2 dimensions respectively, i.e.
 $z \in \mathbb{R}^{16}$ and $v \in \mathbb{R}^2$. The validation settings for the pendulum
 is using a random intial condition with a sinusoidal input. Figure~\ref{fig:koopman_predict}
-shows a qualitative results of using the learned Koopman space to perform linear dynamics update
+shows a qualitative result of using the learned Koopman space to perform linear dynamics update
 with a given initial condition. When comparing with the ground truth in this one-second window,
 it is clear that the
 Koopman space prediction does not capture the nonlinear behaviors well. In fact, the prediction
@@ -527,8 +527,9 @@ is still capable of performing good reference trakcing in such challenging chaot
 
 \subsubsection{Planar Rotor}
 
-The ground truth model parameters in Equation~\ref{eqa:rotor} are specified in
-Table~\ref{tbl:rotor_params}.
+The planar rotor model is a 2D simplification of a quadcopter. It is closer to a real-world
+physical system compared to the above two systems. The ground truth model parameters
+in Equation~\ref{eqa:rotor} are specified in Table~\ref{tbl:rotor_params}.
 \begin{table}[h]
   \centering
   \begin{tabular}{ccc}
@@ -549,7 +550,7 @@ and we can see the flip behavior is done by accurately tracking the rotation ref
 
 \section{Discussion}
 
-For the failure of learning a good linear embedding for a nonlinear pendulum system, there
+For the failure of learning a descent linear embedding for a nonlinear pendulum system, there
 are several explanations that could back up this experimental results. By Koopman Theory, it is
 known that not all systems can be trasformed into a finite dimensional Koopman invariant subspace.
 On the Control Theory side, we also know that linear systems can only have one fixed point at
@@ -560,7 +561,7 @@ is very hard to obtain a finite dimensional approximation of that infinite dimen
 where the Koopman Operator lives in. There is, I believe, another direction to pursue.
 We can relate more closely to the general forms of Koopman Analysis with Control given by
 \cite{generalkoopman}. Instead of seperately learning the embeddings for states and control
-inputs, we can jointly perform the estimation. However, this will also requires additional
+inputs, we can jointly perform the estimation. However, this will also require additional
 thoughts to make a connection with linear control theories as it changes the formulations.\\
 
 On the other side, this project successfully demonstrated
@@ -573,7 +574,7 @@ with control strategies that provide more information to the estimation process 
 we don't have a reliable model. This can potentially reduce the amount of data needed to
 identify an accurate and parsimonious model. One challenge of the SINDYc method is that
 it does not perform well with implicit dynamics such as double pendulums or acrobots.
-Equivalently, those implicit dynamics introduces many fractional nonlinearities that
+Equivalently, those implicit dynamics introduce many fractional nonlinearities that
 are really hard to model as nonlinear libraries. Some work, such as \cite{implicitsindy},
 has been done to tackle this difficulty, but it remains a big challenge for SINDy based
 nonlinear identification methods.
