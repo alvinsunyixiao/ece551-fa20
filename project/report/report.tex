@@ -1,5 +1,9 @@
 \documentclass[10pt,twocolumn]{article}
 
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[hmargin=.75in, vmargin=1in]{geometry}
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
@@ -7,12 +11,15 @@
 \usepackage{booktabs}
 \usepackage{bm}
 \usepackage{graphicx}
+\usepackage{hyperref}
 \usepackage{multirow}
 \usepackage{pifont}
 \usepackage{subcaption}
 \usepackage{xcolor}
 
-\usepackage[hmargin=.75in, vmargin=1in]{geometry}
+\hypersetup{
+  colorlinks = true,
+}
 
 \graphicspath{ {./images/} }
 
@@ -294,6 +301,7 @@ The final loss is a weighted summation of the three terms. We can then jointly t
 weights of the neural network and the linear dynamics matrices $A$ and $B$.
 
 \subsubsection{SINDy with Control \cite{sindyc}}
+
 Unlike Koopman baesd methods, SINDy is an algorithm that explicitly reconstructs the
 structure of the dyanmics. In order to obtain the structure of Equation~\ref{eqa:fxu}
 for arbitrary sytsem,
@@ -591,6 +599,9 @@ nonlinear identification methods.
 \appendixpage
 
 \section{Source Code}
+
+All source codes are git tracked in
+\href{https://github.com/alvinsunyixiao/ece551-fa20/tree/master/project}{this repository}
 
 \section{SINDYc Settings}\label{sec:hyper_sindy}
 
